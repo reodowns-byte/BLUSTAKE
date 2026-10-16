@@ -748,6 +748,16 @@ body.show-home-hero .hero-carousel{display:block!important}
         <p class="status" id="adminWalletAdjustStatus" role="status" aria-live="polite"></p>
       </div>
       <div class="section" style="margin-top:14px">
+        <h3>Settle a finished bet</h3>
+        <p class="muted">Use only after the match result has been verified and the match is marked finished. This calls the secure Supabase settlement function, which updates the bet, selections, wallet and ledger together.</p>
+        <label for="adminSettleBetId">Bet ID</label>
+        <input id="adminSettleBetId" class="field" autocomplete="off" value="d83738dd-3712-4a80-b672-d6cac7c79581" placeholder="Paste the pending bet UUID">
+        <label for="adminSettleOutcome">Verified bet outcome</label>
+        <select id="adminSettleOutcome" class="field"><option value="won">Won</option><option value="lost">Lost</option></select>
+        <button type="button" class="btn full" id="adminSettleBetButton">Settle bet</button>
+        <p class="status" id="adminSettleBetStatus" role="status" aria-live="polite"></p>
+      </div>
+      <div class="section" style="margin-top:14px">
         <div class="section-head"><h3>Account & transaction overview</h3><button type="button" class="btn secondary" id="refreshAdminOverview">Refresh overview</button></div>
         <div class="stats" id="adminOverviewStats"><div class="stat"><small>Registered accounts</small><strong>—</strong></div><div class="stat"><small>Deposit records</small><strong>—</strong></div><div class="stat"><small>Withdrawal requests</small><strong>—</strong></div><div class="stat"><small>Wallet ledger entries</small><strong>—</strong></div></div>
         <p class="status" id="adminOverviewStatus" role="status">Admin data loads after your account is verified.</p>
@@ -1408,6 +1418,42 @@ $("adminAdjustWalletButton")?.addEventListener("click", async () => {
     await loadAdminOverview();
   } catch (err) {
     setStatus(statusId, "Adjustment failed: " + (err.message || "Database error") + ". Check that the email-or-phone admin wallet SQL function has been installed.", "error");
+  } finally { button.disabled = false; }
+});
+$("adminSettleBetButton")?.addEventListener("click", async () => {
+  const button = $("adminSettleBetButton");
+  const betId = String($("adminSettleBetId")?.value || "").trim();
+  const outcome = $("adminSettleOutcome")?.value;
+  if (!(await isAuthorizedAdmin())) { setStatus("adminSettleBetStatus", "Admin access denied.", "error"); return; }
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(betId)) { setStatus("adminSettleBetStatus", "Enter a valid bet UUID.", "error"); return; }
+  if (!window.confirm(`Settle bet ${betId} as ${String(outcome).toUpperCase()}? This may credit the winning return to the user's wallet.`)) return;
+  button.disabled = true;
+  setStatus("adminSettleBetStatus", "Checking bet and match status…");
+  try {
+    const { data: bet, error: betError } = await supabaseClient.from("bluestake_bets").select("id,status,potential_return").eq("id", betId).maybeSingle();
+    if (betError) throw betError;
+    if (!bet) throw new Error("Bet not found or admin read access is not configured.");
+    if (String(bet.status || "").toLowerCase() !== "pending") throw new Error(`This bet is ${bet.status}; only pending bets can be settled.`);
+    const { data: legs, error: legError } = await supabaseClient.from("bluestake_bet_selections").select("market_id").eq("bet_id", betId);
+    if (legError) throw legError;
+    if (!legs || !legs.length) throw new Error("No selections were found for this bet.");
+    const marketIds = [...new Set(legs.map(x => x.market_id).filter(Boolean))];
+    const { data: markets, error: marketError } = await supabaseClient.from("bluestake_markets").select("id,match_id").in("id", marketIds);
+    if (marketError) throw marketError;
+    const matchIds = [...new Set((markets || []).map(x => x.match_id).filter(Boolean))];
+    if (!matchIds.length) throw new Error("No match is linked to this bet.");
+    const { data: matches, error: matchError } = await supabaseClient.from("bluestake_matches").select("id,home_team,away_team,match_status,score_home,score_away").in("id", matchIds);
+    if (matchError) throw matchError;
+    const unfinished = (matches || []).filter(m => String(m.match_status || "").toLowerCase() !== "finished");
+    if (unfinished.length) throw new Error("Cannot settle yet. Every match linked to this bet must be marked finished first.");
+    const scoreSummary = (matches || []).map(m => `${m.home_team} ${m.score_home}-${m.score_away} ${m.away_team}`).join("; ");
+    const { error: settleError } = await supabaseClient.rpc("bluestake_admin_settle_bet", { p_bet_id: betId, p_outcome: outcome });
+    if (settleError) throw settleError;
+    setStatus("adminSettleBetStatus", `Bet settled as ${String(outcome).toUpperCase()}. Verified finished match(es): ${scoreSummary}. Refresh Bet History to see the result.`, "ok");
+    if ($("view-bets") && !$("view-bets").classList.contains("hidden")) await loadMyBets();
+    await loadAdminOverview();
+  } catch (err) {
+    setStatus("adminSettleBetStatus", "Settlement failed: " + (err.message || "Database error"), "error");
   } finally { button.disabled = false; }
 });
 $("refreshAdminOverview")?.addEventListener("click",loadAdminOverview);
