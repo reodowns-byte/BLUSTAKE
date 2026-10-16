@@ -1505,15 +1505,36 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
     const id=running.get(panel);
     if(id){window.clearInterval(id);running.delete(panel);}
   }
+  // Delegate from document because the match-details modal is rendered dynamically.
+  // This listener is registered after the modal markup exists and survives innerHTML updates.
   document.addEventListener('click',function(e){
     const btn=e.target.closest('[data-toggle-tracker]');
     if(!btn) return;
     const id=btn.getAttribute('data-toggle-tracker');
-    const panel=document.querySelector('[data-tracker-panel="'+CSS.escape(id)+'"]');
+    const panel=Array.from(document.querySelectorAll('[data-tracker-panel]'))
+      .find(el=>el.getAttribute('data-tracker-panel')===id);
     if(!panel) return;
-    window.setTimeout(()=>{
-      if(panel.classList.contains('open')) start(panel); else stop(panel);
-    },0);
+
+    const opening=btn.classList.contains('tracker-launch')
+      ? !panel.classList.contains('open')
+      : false;
+
+    panel.classList.toggle('open',opening);
+    panel.style.display=opening?'block':'none';
+
+    const scope=document.getElementById('matchDetailsContent')||document;
+    scope.querySelectorAll('[data-toggle-tracker]').forEach(control=>{
+      if(control.getAttribute('data-toggle-tracker')===id){
+        control.setAttribute('aria-expanded',String(opening));
+      }
+    });
+
+    if(opening){
+      start(panel);
+      window.setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),80);
+    } else {
+      stop(panel);
+    }
   });
   document.addEventListener('click',function(e){
     const close=e.target.closest('#closeMatchDetails');
