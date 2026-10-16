@@ -302,7 +302,87 @@ body{background:#f3f7fb;color:#142b3d}
 /* Hero image carousel belongs to the Home page only; never show it on wallet, deposit, withdrawal, profile, history, or admin screens. */
 .hero-carousel{display:none!important}
 body.show-home-hero .hero-carousel{display:block!important}
-\n</style>
+\n
+/* My Bets screen based on the supplied reference, in BLUSTAKE blue and white */
+.mybets-page{margin:0 -14px;min-height:calc(100vh - 170px);background:#fff;color:#142b3d;padding-bottom:24px}
+.mybets-header{min-height:94px;background:#06345a;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 18px}
+.mybets-brand{font-size:23px;font-weight:1000;letter-spacing:.4px;color:#fff}
+.mybets-balance{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:18px;border:1px solid #ffffff50;background:#075b91;color:#fff}
+.mybets-wallet-icon{font-size:22px}
+.mybets-balance small{display:block;font-size:9px;letter-spacing:1.2px;font-weight:900;color:#c8eaff}
+.mybets-balance strong{display:block;font-size:15px;color:#fff;white-space:nowrap}
+.mybets-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#06345a;padding:0 18px}
+.mybets-tabs button{height:64px;border-radius:20px 20px 0 0;background:#0b4773;color:#c6dbea;font-size:16px;font-weight:950}
+.mybets-tabs button.active{background:#fff;color:#075b91}
+.mybets-filters{display:flex;align-items:center;gap:9px;overflow-x:auto;white-space:nowrap;padding:17px 18px;border-bottom:1px solid #dce6ee;background:#f4f8fc}
+.mybets-filters button{flex:0 0 auto;border:1px solid #b8cddd;border-radius:15px;background:#fff;color:#142b3d;padding:12px 17px;font-size:14px;font-weight:850}
+.mybets-filters button.active{border-color:#075b91;background:#e5f4fc;color:#075b91;box-shadow:inset 0 0 0 1px #075b91}
+.mybets-empty{min-height:calc(100vh - 490px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;text-align:center;padding:40px 20px 90px;color:#34455b}
+.mybets-empty-icon{font-size:47px;line-height:1;margin-bottom:22px;filter:grayscale(.2)}
+.mybets-empty strong{font-size:17px;font-weight:900}
+.mybets-empty span{font-size:17px;font-weight:850}
+.mybets-list{padding:16px}
+.mybets-list .notice{background:#f4f8fc;border:1px solid #dce6ee;border-radius:12px;padding:14px;color:#718497}
+@media(min-width:700px){.mybets-page{max-width:780px;margin:0 auto;border:1px solid #dce6ee;border-radius:0 0 16px 16px;overflow:hidden}.mybets-header{padding-left:24px;padding-right:24px}}
+@media(max-width:380px){.mybets-header{padding:15px 13px}.mybets-brand{font-size:20px}.mybets-balance{padding:8px 9px}.mybets-filters{padding:14px 12px;gap:7px}.mybets-filters button{padding:11px 13px;font-size:13px}}
+
+
+/* BLUSTAKE Booking Code / bet slip, inspired by the reference layout */
+.booking-slip-page{margin:0 -14px;min-height:calc(100vh - 160px);background:#fff;color:#172d40;padding-bottom:24px}
+.booking-slip-header{min-height:86px;padding:16px 18px;background:#06345a;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.booking-slip-header>strong{font-size:22px;letter-spacing:.5px;font-weight:1000}
+.booking-slip-balance{display:flex;align-items:center;gap:9px;background:#075b91;border:1px solid #ffffff4d;border-radius:15px;padding:9px 12px}
+.booking-slip-balance>span{font-size:21px}
+.booking-slip-balance small{display:block;font-size:9px;letter-spacing:1px;color:#c8eaff;font-weight:900}
+.booking-slip-balance strong{display:block;color:#fff;font-size:14px;white-space:nowrap}
+.booking-mode-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;background:#06345a;padding:0 12px}
+.booking-mode-tabs button{height:58px;background:#0b4773;color:#d5e8f5;font-size:15px;font-weight:900;border-radius:18px 18px 0 0}
+.booking-mode-tabs button.active{background:#fff;color:#075b91}
+.booking-slip-summary{display:flex;align-items:center;gap:9px;padding:14px 16px;background:#f3f7fb;border-bottom:1px solid #dce6ee}
+.booking-selection-count{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:#075b91;color:#fff;font-weight:900}
+.booking-slip-summary>strong{font-size:14px;flex:1}
+.booking-total-odds{font-size:12px;color:#718497;white-space:nowrap}
+.booking-total-odds b{color:#075b91;font-size:14px;margin-left:4px}
+.booking-slip-summary>button{background:transparent;color:#075b91;font-size:21px;padding:4px 8px}
+.booking-slip-empty{min-height:190px;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:8px;padding:30px 24px;background:#fff;color:#34455b}
+.booking-empty-icon{font-size:42px;color:#075b91;margin-bottom:10px}
+.booking-slip-empty strong{font-size:17px;font-weight:950}
+.booking-slip-empty span{font-size:14px;color:#718497;line-height:1.5}
+.booking-slip-page .selection{display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #dce6ee;background:#fff}
+.booking-slip-page .selection>div{flex:1;min-width:0}
+.booking-slip-page .selection strong{font-size:15px;color:#172d40}
+.booking-slip-page .selection .muted{font-size:13px;color:#718497;margin-top:5px}
+.booking-slip-page .selection button{background:#eaf5fc;color:#075b91;border:1px solid #c8dfef;border-radius:8px;padding:7px 9px;font-size:12px;font-weight:800}
+.booking-people-also{display:flex;align-items:center;gap:9px;padding:15px 16px;border-bottom:1px solid #e5edf3;color:#253b4e;font-size:15px;font-weight:800}
+.booking-people-also>span:first-child{background:#075b91;color:#fff;border-radius:4px;padding:3px 6px}
+.booking-expand{margin-left:auto;color:#075b91;font-size:24px}
+.booking-bonus-note{margin:12px 16px 14px;border-radius:20px;padding:7px 10px;background:#e4f4ec;color:#137348;text-align:center;font-size:12px}
+.booking-stake-row{display:flex;align-items:center;gap:8px;padding:10px 16px 14px;background:#fff}
+.booking-stake-row label{flex:1;font-size:15px;font-weight:750}
+.booking-stake-row>span{color:#34455b;font-size:14px}
+.booking-stake-row input{width:112px;min-width:0;padding:8px 9px;border:1px solid #075b91;border-radius:5px;background:#fff;color:#172d40;text-align:right;font-size:15px}
+.booking-stake-tools{display:flex;align-items:center;gap:6px;padding:10px 12px;background:#eaf2f8;border-top:1px solid #dce6ee}
+.booking-stake-tools>button{flex:1;min-width:0;border:1px solid #b7cddd;border-radius:5px;background:#fff;color:#075b91;padding:10px 3px;font-size:14px;font-weight:850}
+.booking-stake-tools label{display:flex;align-items:center;gap:5px;font-size:10px;color:#34455b;white-space:nowrap}
+.booking-stake-tools input{accent-color:#075b91}
+.booking-keypad{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:#d4e0e9;border-bottom:1px solid #d4e0e9}
+.booking-keypad button{min-height:54px;background:#f7fafc;color:#172d40;font-size:17px;border:0}
+.booking-keypad .booking-keypad-done{grid-column:7;grid-row:1 / span 2;background:#075b91;color:#fff;font-weight:900}
+.booking-insure{display:flex;align-items:center;gap:12px;padding:12px 16px 4px;color:#075b91}
+.booking-insure strong{font-size:13px;letter-spacing:.6px}
+.booking-insure span{font-size:12px;color:#718497}
+.booking-stat-row,.booking-potential-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;font-size:15px}
+.booking-stat-row strong{color:#172d40}
+.booking-potential-row{margin:0 12px 12px;background:#e0f3e8;color:#137348;font-weight:850;border-radius:4px}
+.booking-actions{display:grid;grid-template-columns:1fr 1fr}
+.booking-actions button{min-height:58px;font-size:17px;font-weight:950}
+#bookBetButton{background:#075b91;color:#fff}
+#placeBet{background:#dce6ee;color:#718497}
+.booking-note{padding:8px 16px 0;font-size:12px;line-height:1.5}
+@media(min-width:700px){.booking-slip-page{max-width:780px;margin:0 auto;border:1px solid #dce6ee}.booking-slip-empty{min-height:230px}}
+@media(max-width:390px){.booking-slip-header{padding:14px 12px}.booking-slip-header>strong{font-size:19px}.booking-slip-balance{padding:8px}.booking-slip-summary{padding:12px}.booking-stake-tools{gap:4px;padding:8px}.booking-stake-tools label{font-size:9px}.booking-keypad button{min-height:48px;font-size:15px}.booking-stake-row{padding-left:12px;padding-right:12px}}
+
+</style>
 </head>
 <body class="show-home-hero">
 <header class="header">
@@ -379,17 +459,54 @@ body.show-home-hero .hero-carousel{display:block!important}
   </section>
 
   <section id="view-booking-code" class="view hidden">
-    <div class="section booking-code-panel">
-      <div class="section-head"><h2>Booking Code</h2><span id="slipCount" class="pill">0 selections</span></div>
-      <div id="slipItems" class="slip-empty">Your selected matches and odds will appear here. Choose odds from a match to add a selection.</div>
-      <label for="stakeInput">Stake (GH₵)</label>
-      <input id="stakeInput" class="field" type="number" min="0.01" step="0.01" placeholder="Enter stake" disabled>
-      <div class="stats" style="margin-top:12px">
-        <div class="stat"><small>Potential return</small><strong id="potentialReturn">GH₵0.00</strong></div>
-        <div class="stat"><small>Selections</small><strong id="selectionStat">0</strong></div>
+    <div class="booking-slip-page">
+      <header class="booking-slip-header">
+        <strong>BLUSTAKE</strong>
+        <div class="booking-slip-balance"><span>▣</span><div><small>BALANCE</small><strong id="bookingWalletBalance">GH₵ —</strong></div></div>
+      </header>
+      <div class="booking-mode-tabs">
+        <button type="button" class="active" id="bookingMultipleTab">Multiple</button>
+        <button type="button" id="bookingSingleTab">Single</button>
+        <button type="button" id="bookingSystemTab">System</button>
       </div>
-      <button class="btn full" id="placeBet" disabled>Place bet</button>
-      <p class="muted">Bet placement remains disabled until an authorized odds feed and secure server-side bet settlement are configured.</p>
+      <div class="booking-slip-summary">
+        <span class="booking-selection-count" id="slipCount">0</span>
+        <strong>Selections</strong>
+        <span class="booking-total-odds">Total odds <b id="bookingTotalOdds">1.00</b></span>
+        <button type="button" id="clearBookingSelections" aria-label="Clear all selections">✕</button>
+      </div>
+      <div id="slipItems" class="slip-empty booking-slip-empty">
+        <div class="booking-empty-icon">▤</div>
+        <strong>No selections yet</strong>
+        <span>Choose odds from a match and they will appear here.</span>
+      </div>
+      <div class="booking-people-also"><span>★</span> People also bet on… <span class="booking-expand">⌄</span></div>
+      <div class="booking-bonus-note">Choose qualifying selections to see any available offers</div>
+      <div class="booking-stake-row">
+        <label for="stakeInput">Total Stake</label>
+        <span>GH₵</span>
+        <input id="stakeInput" class="field" type="number" min="0.1" step="0.1" inputmode="decimal" placeholder="min. 0.1" value="">
+      </div>
+      <div class="booking-stake-tools">
+        <button type="button" data-stake-add="100">+100</button>
+        <button type="button" data-stake-add="300">+300</button>
+        <button type="button" data-stake-add="500">+500</button>
+        <label><input type="checkbox" id="defaultStakeCheckbox"> Update default stake</label>
+      </div>
+      <div class="booking-keypad" id="bookingKeypad" aria-label="Stake keypad">
+        <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="back">⌫</button>
+        <button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="0">0</button><button type="button" data-key=".">.</button><button type="button" data-key="00">00</button><button type="button" data-key="clear">Clear</button>
+        <button type="button" class="booking-keypad-done" data-key="done">Done</button>
+      </div>
+      <div class="booking-insure"><strong>BLUSTAKE</strong><span>Secure bet slip</span></div>
+      <div class="booking-stat-row"><span>Total Odds</span><strong id="bookingTotalOddsBottom">1.00</strong></div>
+      <div class="booking-potential-row"><span>Potential Win</span><strong id="potentialReturn">GH₵0.00</strong></div>
+      <div class="booking-actions">
+        <button type="button" id="bookBetButton">Book Bet</button>
+        <button type="button" id="placeBet" disabled>Place Bet</button>
+      </div>
+      <p class="muted booking-note" id="bookingBetStatus">Bet placement becomes available only after an authorized odds feed and secure server-side settlement are configured.</p>
+      <strong id="selectionStat" class="hidden">0</strong>
     </div>
   </section>
 
@@ -522,6 +639,39 @@ body.show-home-hero .hero-carousel{display:block!important}
     </div>
   </section>
 
+  <section id="view-bets" class="view hidden">
+    <div class="mybets-page">
+      <header class="mybets-header">
+        <div class="mybets-brand">BLUSTAKE</div>
+        <div class="mybets-balance"><span class="mybets-wallet-icon">▣</span><span><small>BALANCE</small><strong id="myBetsBalance">GH₵ —</strong></span></div>
+      </header>
+      <div class="mybets-tabs" role="tablist" aria-label="Bet views">
+        <button type="button" id="openBetsTab" class="active" role="tab" aria-selected="true">Open Bets</button>
+        <button type="button" id="betHistoryTab" role="tab" aria-selected="false">Bet History</button>
+      </div>
+      <div class="mybets-filters" id="openBetsFilters">
+        <button type="button" class="active" data-open-filter="all">All</button>
+        <button type="button" data-open-filter="cashout">Cashout Available</button>
+        <button type="button" data-open-filter="live">Live Games</button>
+      </div>
+      <div class="mybets-filters hidden" id="betHistoryFilters">
+        <button type="button" class="active" data-history-filter="settled">Bet Status: Settled</button>
+        <button type="button" data-history-filter="all">🏆 Result: All</button>
+      </div>
+      <div class="mybets-empty" id="openBetsEmpty">
+        <div class="mybets-empty-icon">🎟</div>
+        <strong>No bets? No problem!</strong>
+        <span>Get started with popular codes!</span>
+      </div>
+      <div class="mybets-empty hidden" id="betHistoryEmpty">
+        <div class="mybets-empty-icon">🎟</div>
+        <strong>No settled tickets yet.</strong>
+      </div>
+      <div id="myBetsList" class="mybets-list hidden"></div>
+      <div class="hidden" aria-hidden="true" id="myBetsInternalStatus"></div>
+    </div>
+  </section>
+
   <section id="view-history" class="view hidden">
     <div class="section">
       <div class="section-head"><h2>My transaction requests</h2><button id="refreshRequests" class="btn secondary">Refresh</button></div>
@@ -548,7 +698,7 @@ body.show-home-hero .hero-carousel{display:block!important}
     <button type="button" class="active" data-view="sports"><span class="nav-icon">⌂</span><span>Home</span></button>
     <button type="button" data-view="sports" id="bottomLive"><span class="nav-icon">🏆</span><span>Live Matches</span></button>
     <button type="button" id="bottomBookingCode" class="booking-code-nav"><span class="nav-icon">▤</span><span>Booking Code</span></button>
-    <button type="button" data-view="history"><span class="nav-icon">🎟</span><span>My Bets</span></button>
+    <button type="button" data-view="bets"><span class="nav-icon">🎟</span><span>My Bets</span></button>
     <button type="button" id="bottomProfile"><span class="nav-icon">♙</span><span>My Profile</span></button>
   </nav>
   <footer class="footer">BLUSTAKE · Secure access · Transaction status must reflect verified server records.</footer>
@@ -615,10 +765,38 @@ function setView(view) {
   document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("active",b.dataset.view===view));
   const toolbar=$("sportsToolbar"); if(toolbar) toolbar.classList.toggle("hidden",view!=="sports");
   if (view === "wallet") refreshFundingStatus();
+  if (view === "bets") updateMyBetsBalance();
+  if (view === "booking-code") { const b=$("walletBalance")?.textContent; if($("bookingWalletBalance")) $("bookingWalletBalance").textContent=(b && b!=="Checking…")?b:"GH₵ —"; renderBookingCode(); }
   if (view === "history") loadRequests();
   document.querySelectorAll(".bottom-nav [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
 }
 document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click",()=>setView(b.dataset.view)));
+
+function updateMyBetsBalance(){
+  const source=$("walletBalance")?.textContent;
+  if($("myBetsBalance")) $("myBetsBalance").textContent=(source && source!=="Checking…")?source:"GH₵ —";
+}
+function showMyBetsTab(tab){
+  const open=tab==="open";
+  $("openBetsTab").classList.toggle("active",open);
+  $("openBetsTab").setAttribute("aria-selected",String(open));
+  $("betHistoryTab").classList.toggle("active",!open);
+  $("betHistoryTab").setAttribute("aria-selected",String(!open));
+  $("openBetsFilters").classList.toggle("hidden",!open);
+  $("betHistoryFilters").classList.toggle("hidden",open);
+  $("openBetsEmpty").classList.toggle("hidden",!open);
+  $("betHistoryEmpty").classList.toggle("hidden",open);
+  $("myBetsList").classList.add("hidden");
+}
+$("openBetsTab")?.addEventListener("click",()=>showMyBetsTab("open"));
+$("betHistoryTab")?.addEventListener("click",()=>showMyBetsTab("history"));
+document.querySelectorAll("[data-open-filter]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("[data-open-filter]").forEach(x=>x.classList.toggle("active",x===b));
+}));
+document.querySelectorAll("[data-history-filter]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("[data-history-filter]").forEach(x=>x.classList.toggle("active",x===b));
+}));
+
 document.getElementById("openWalletFromWithdrawal")?.addEventListener("click",()=>setView("wallet"));
 document.getElementById("paymentBack")?.addEventListener("click",()=>setView("wallet"));
 document.getElementById("changeDepositAmount")?.addEventListener("click",()=>setView("wallet"));
@@ -731,17 +909,19 @@ document.getElementById("fixtureSearch")?.addEventListener("input",e=>{
 function renderBookingCode(){
   const items=$("slipItems");
   if(!items)return;
-  $("slipCount").textContent=selectedMarkets.length+" selection"+(selectedMarkets.length===1?"":"s");
+  $("slipCount").textContent=String(selectedMarkets.length);
   $("selectionStat").textContent=String(selectedMarkets.length);
+  const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
+  $("bookingTotalOdds").textContent=selectedMarkets.length?odds.toFixed(2):"1.00";
+  $("bookingTotalOddsBottom").textContent=selectedMarkets.length?odds.toFixed(2):"1.00";
   if(!selectedMarkets.length){
-    items.className="slip-empty";
-    items.textContent="Your selected matches and odds will appear here. Choose odds from a match to add a selection.";
+    items.className="slip-empty booking-slip-empty";
+    items.innerHTML='<div class="booking-empty-icon">▤</div><strong>No selections yet</strong><span>Choose odds from a match and they will appear here.</span>';
   }else{
-    items.className="";
-    items.innerHTML=selectedMarkets.map((m,i)=>`<div class="selection"><div><strong>${escapeHtml(m.match)}</strong><div class="muted">${escapeHtml(m.market)} · Odds ${Number(m.odds).toFixed(2)}</div></div><button type="button" data-remove-selection="${i}" aria-label="Remove selection">Remove</button></div>`).join("");
+    items.className="booking-slip-selections";
+    items.innerHTML=selectedMarkets.map((m,i)=>`<div class="selection"><div><strong>⚽ ${escapeHtml(m.market||"Selection")}</strong><div>${escapeHtml(m.match)}</div><div class="muted">Odds ${Number(m.odds).toFixed(2)}</div></div><button type="button" data-remove-selection="${i}" aria-label="Remove selection">Remove ✕</button></div>`).join("");
   }
   const stake=Number($("stakeInput")?.value||0);
-  const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
   $("potentialReturn").textContent=money(stake*odds);
   $("placeBet").disabled=true;
 }
@@ -768,6 +948,39 @@ document.getElementById("slipItems")?.addEventListener("click",e=>{
   renderBookingCode();
 });
 $("stakeInput")?.addEventListener("input",renderBookingCode);
+document.querySelectorAll("[data-stake-add]").forEach(button=>button.addEventListener("click",()=>{
+  const input=$("stakeInput");
+  input.value=(Number(input.value||0)+Number(button.dataset.stakeAdd)).toFixed(2);
+  renderBookingCode();
+}));
+document.getElementById("bookingKeypad")?.addEventListener("click",e=>{
+  const button=e.target.closest("[data-key]");
+  if(!button)return;
+  const input=$("stakeInput"), key=button.dataset.key;
+  if(key==="done"){input.blur();return;}
+  if(key==="clear")input.value="";
+  else if(key==="back")input.value=input.value.slice(0,-1);
+  else if(key==="."&&!input.value.includes("."))input.value=input.value?input.value+".":"0.";
+  else if(key!=="."&&key!=="back")input.value+=key;
+  renderBookingCode();
+});
+document.getElementById("clearBookingSelections")?.addEventListener("click",()=>{
+  selectedMarkets=[];
+  renderBookingCode();
+  document.querySelectorAll("#matches .market.selected").forEach(b=>b.classList.remove("selected"));
+});
+document.getElementById("bookingSingleTab")?.addEventListener("click",()=>{
+  document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingSingleTab"));
+});
+document.getElementById("bookingMultipleTab")?.addEventListener("click",()=>{
+  document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingMultipleTab"));
+});
+document.getElementById("bookingSystemTab")?.addEventListener("click",()=>{
+  document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingSystemTab"));
+});
+document.getElementById("bookBetButton")?.addEventListener("click",()=>{
+  setStatus("bookingBetStatus","Booking a bet is not connected to a booking-code service yet. No bet has been placed.","error");
+});
 renderBookingCode();
 
 $("authButton").addEventListener("click",()=>currentUser ? signOut() : (setAuthMode("login"),showAuth()));
