@@ -653,21 +653,10 @@ body.show-home-hero .hero-carousel{display:block!important}
   <section id="view-withdrawal" class="view hidden">
     <div class="section">
       <div class="section-head"><h2>Withdrawal</h2><span class="pill">Request</span></div>
-      <p class="muted">Submit a withdrawal request for review. The status shown here must not be mistaken for a completed payout.</p>
+      <p class="notice">Withdrawals are currently disabled. You cannot submit a withdrawal or send money out until a verified payment gateway and payout process have been connected.</p>
       <button type="button" class="btn secondary" id="openWalletFromWithdrawal">Open wallet / deposit</button>
-        <section class="section" style="padding:0;border:0;box-shadow:none;margin:0">
-          <h2>Withdrawal request</h2>
-          <p class="muted">Submit an amount for review. Submitting a request does not send money to your Mobile Money account.</p>
-          <label for="withdrawAmount">Amount to request (GH₵)</label>
-          <input id="withdrawAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Enter amount">
-          <label for="customMessage">Customized message</label>
-          <textarea id="customMessage" class="field" rows="3" maxlength="1000" placeholder="Enter the message you want displayed after submission"></textarea>
-          <div class="notice">Before submitting, review the withdrawal terms. Your request will be recorded as pending review; it will not be shown as a completed payout.</div>
-          <label style="display:flex;align-items:flex-start;gap:9px;line-height:1.45"><input id="termsCheck" type="checkbox" style="margin-top:3px"> I have read and agree to the withdrawal terms.</label>
-          <p><a href="/withdrawal-terms" style="color:#075b91;font-weight:900">Read Terms and Conditions</a></p>
-          <button id="withdrawButton" class="btn full">Submit withdrawal request</button>
-          <p id="withdrawStatus" class="status" role="status" aria-live="polite"></p>
-        </section>
+      <button id="withdrawButton" class="btn full" disabled aria-disabled="true">Withdrawals unavailable</button>
+      <p id="withdrawStatus" class="status" role="status" aria-live="polite">Withdrawal processing has not been enabled.</p>
     </div>
   </section>
 
@@ -715,6 +704,20 @@ body.show-home-hero .hero-carousel{display:block!important}
     <div class="section">
       <h2>BLUSTAKE Admin</h2>
       <p class="muted">Private administration for the authorized account only. Registration and transaction information is restricted to admin access.</p>
+      <div class="section" style="margin-top:14px">
+        <h3>Credit or deduct a user's wallet</h3>
+        <p class="muted">Enter the user's registered email and amount in GH₵. This updates their wallet and records the adjustment in the wallet ledger. Only the verified admin can use this control.</p>
+        <label for="adminWalletEmail">User's registered email</label>
+        <input id="adminWalletEmail" class="field" type="email" autocomplete="email" placeholder="user@example.com">
+        <div class="admin-grid">
+          <div><label for="adminWalletAmount">Amount (GH₵)</label><input id="adminWalletAmount" class="field" type="number" min="0.01" max="1000000" step="0.01" placeholder="0.00"></div>
+          <div><label for="adminWalletDirection">Action</label><select id="adminWalletDirection" class="field"><option value="credit">Credit wallet</option><option value="debit">Deduct from wallet</option></select></div>
+        </div>
+        <label for="adminWalletReason">Reason / reference</label>
+        <input id="adminWalletReason" class="field" maxlength="180" placeholder="e.g. Admin wallet adjustment">
+        <button type="button" class="btn full" id="adminAdjustWalletButton">Apply wallet adjustment</button>
+        <p class="status" id="adminWalletAdjustStatus" role="status" aria-live="polite"></p>
+      </div>
       <div class="section" style="margin-top:14px">
         <div class="section-head"><h3>Account & transaction overview</h3><button type="button" class="btn secondary" id="refreshAdminOverview">Refresh overview</button></div>
         <div class="stats" id="adminOverviewStats"><div class="stat"><small>Registered accounts</small><strong>—</strong></div><div class="stat"><small>Deposit records</small><strong>—</strong></div><div class="stat"><small>Withdrawal requests</small><strong>—</strong></div><div class="stat"><small>Wallet ledger entries</small><strong>—</strong></div></div>
@@ -1185,6 +1188,31 @@ async function loadAdminOverview() {
     setStatus("adminOverviewStatus","Could not load admin records: "+(err.message||"database error")+". Apply the admin-read SQL policies provided with this update.","error");
   }
 }
+$("adminAdjustWalletButton")?.addEventListener("click", async () => {
+  const statusId = "adminWalletAdjustStatus";
+  const email = String($("adminWalletEmail")?.value || "").trim().toLowerCase();
+  const amount = Number($("adminWalletAmount")?.value);
+  const direction = $("adminWalletDirection")?.value;
+  const description = String($("adminWalletReason")?.value || "").trim() || "Admin wallet adjustment";
+  const button = $("adminAdjustWalletButton");
+  if (!(await isAuthorizedAdmin())) { setStatus(statusId, "Admin access denied.", "error"); return; }
+  if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) { setStatus(statusId, "Enter the user's registered email address.", "error"); return; }
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000) { setStatus(statusId, "Enter a valid amount greater than zero.", "error"); return; }
+  if (!window.confirm(`${direction === "credit" ? "Credit" : "Deduct"} GH₵${amount.toFixed(2)} ${direction === "credit" ? "to" : "from"} ${email}?`)) return;
+  button.disabled = true;
+  setStatus(statusId, "Applying wallet adjustment…");
+  try {
+    const { data, error } = await supabaseClient.rpc("bluestake_admin_adjust_wallet_by_email", {
+      p_email: email, p_amount: amount, p_direction: direction, p_description: description
+    });
+    if (error) throw error;
+    setStatus(statusId, `Wallet updated successfully. New balance: GH₵${Number(data).toFixed(2)}.`, "ok");
+    $("adminWalletAmount").value = "";
+    await loadAdminOverview();
+  } catch (err) {
+    setStatus(statusId, "Adjustment failed: " + (err.message || "Database error") + ". Check that the admin wallet SQL function has been installed.", "error");
+  } finally { button.disabled = false; }
+});
 $("refreshAdminOverview")?.addEventListener("click",loadAdminOverview);
 $("brandAdminTrigger")?.addEventListener("click",async()=>{
   if(!currentUser){setView("sports");return;}
