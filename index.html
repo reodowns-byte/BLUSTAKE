@@ -552,7 +552,7 @@ body.show-home-hero .hero-carousel{display:block!important}
         <button type="button" id="bookBetButton">Book Bet</button>
         <button type="button" id="placeBet" disabled>Place Bet</button>
       </div>
-      <p class="muted booking-note" id="bookingBetStatus">Bet placement becomes available only after an authorized odds feed and secure server-side settlement are configured.</p>
+      <p class="muted booking-note" id="bookingBetStatus">Select saved match markets, enter a stake, and tap Place Bet. Supabase will validate the wallet and selections before creating a bet.</p>
       <strong id="selectionStat" class="hidden">0</strong>
     </div>
   </section>
@@ -879,7 +879,7 @@ async function setView(view) {
   document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("active",b.dataset.view===view));
   const toolbar=$("sportsToolbar"); if(toolbar) toolbar.classList.toggle("hidden",view!=="sports");
   if (view === "wallet") refreshFundingStatus();
-  if (view === "bets") updateMyBetsBalance();
+  if (view === "bets") { updateMyBetsBalance(); loadMyBets(); }
   if (view === "booking-code") { const b=$("walletBalance")?.textContent; if($("bookingWalletBalance")) $("bookingWalletBalance").textContent=(b && b!=="Checking…")?b:"GH₵ —"; renderBookingCode(); }
   if (view === "history") loadRequests();
   document.querySelectorAll(".bottom-nav [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
@@ -901,6 +901,7 @@ function showMyBetsTab(tab){
   $("openBetsEmpty").classList.toggle("hidden",!open);
   $("betHistoryEmpty").classList.toggle("hidden",open);
   $("myBetsList").classList.add("hidden");
+  loadMyBets();
 }
 $("openBetsTab")?.addEventListener("click",()=>showMyBetsTab("open"));
 $("betHistoryTab")?.addEventListener("click",()=>showMyBetsTab("history"));
@@ -910,6 +911,43 @@ document.querySelectorAll("[data-open-filter]").forEach(b=>b.addEventListener("c
 document.querySelectorAll("[data-history-filter]").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("[data-history-filter]").forEach(x=>x.classList.toggle("active",x===b));
 }));
+
+async function loadMyBets(){
+  const list=$("myBetsList");
+  if(!list)return;
+  if(!currentUser||!supabaseClient){
+    list.classList.add("hidden");
+    $("openBetsEmpty").classList.remove("hidden");
+    $("betHistoryEmpty").classList.remove("hidden");
+    return;
+  }
+  const isHistory=!$("betHistoryTab").classList.contains("active");
+  const empty=isHistory?$("betHistoryEmpty"):$("openBetsEmpty");
+  list.classList.remove("hidden");
+  list.innerHTML='<div class="notice">Loading your bets…</div>';
+  empty.classList.add("hidden");
+  try{
+    const {data,error}=await supabaseClient.from("bluestake_bets").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
+    if(error)throw error;
+    const rows=(data||[]).filter(b=>{
+      const status=String(b.status||b.bet_status||"").toLowerCase();
+      return isHistory ? (status.includes("settled")||status.includes("won")||status.includes("lost")||status.includes("void")) : !(status.includes("settled")||status.includes("won")||status.includes("lost")||status.includes("void"));
+    });
+    if(!rows.length){list.classList.add("hidden");empty.classList.remove("hidden");return;}
+    empty.classList.add("hidden");
+    list.innerHTML=rows.map(b=>{
+      const stake=Number(b.stake??b.amount??0);
+      const odds=Number(b.total_odds??b.odds??1);
+      const potential=Number(b.potential_return??b.potential_win??(stake*odds));
+      const status=String(b.status||b.bet_status||(isHistory?"Settled":"Open"));
+      const ref=b.id||b.reference||b.bet_reference||"Bet";
+      return `<article class="selection"><div><strong>${escapeHtml(status.toUpperCase())} · ${escapeHtml(String(ref).slice(0,12))}</strong><div>Stake: ${escapeHtml(money(stake))}</div><div>Total odds: ${Number.isFinite(odds)?odds.toFixed(2):"—"}</div><div>Potential return: ${escapeHtml(money(potential))}</div><div class="muted">${escapeHtml(b.created_at?new Date(b.created_at).toLocaleString():"")}</div></div></article>`;
+    }).join("");
+  }catch(err){
+    list.classList.remove("hidden");
+    list.innerHTML=`<div class="notice">Could not load your bets: ${escapeHtml(err.message||"database error")}.</div>`;
+  }
+}
 
 document.getElementById("openWalletFromWithdrawal")?.addEventListener("click",()=>setView("wallet"));
 document.getElementById("paymentBack")?.addEventListener("click",()=>setView("wallet"));
@@ -1038,7 +1076,14 @@ function renderBookingCode(){
   }
   const stake=Number($("stakeInput")?.value||0);
   $("potentialReturn").textContent=money(stake*odds);
-  $("placeBet").disabled=true;
+  const stakeValid=Number.isFinite(stake)&&stake>0;
+  const hasDatabaseMarkets=selectedMarkets.length>0&&selectedMarkets.every(m=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(m.marketId||"")));
+  $("placeBet").disabled=!(currentUser&&stakeValid&&hasDatabaseMarkets);
+  if(!selectedMarkets.length) setStatus("bookingBetStatus","Choose market odds and enter a stake.");
+  else if(!currentUser) setStatus("bookingBetStatus","Sign in to place a bet. Your selections are kept in this slip.");
+  else if(!hasDatabaseMarkets) setStatus("bookingBetStatus","One or more selections are not linked to a saved database market. Refresh matches and select the odds again.","error");
+  else if(!stakeValid) setStatus("bookingBetStatus","Enter a stake greater than GH₵0.00.");
+  else setStatus("bookingBetStatus","Ready to place your bet. Your wallet will be checked securely by Supabase.","ok");
 }
 document.getElementById("matches")?.addEventListener("click",e=>{
   const button=e.target.closest(".market");
@@ -1138,6 +1183,36 @@ document.querySelectorAll("[data-close-booking-code]").forEach(el=>el.addEventLi
 document.getElementById("closeBookingCodePreview")?.addEventListener("click",closeBookingCodePreview);
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeBookingCodePreview();});
 renderBookingCode();
+
+$("placeBet")?.addEventListener("click",async()=>{
+  const button=$("placeBet");
+  if(!currentUser){showAuth();setStatus("bookingBetStatus","Sign in before placing a bet.","error");return;}
+  if(!supabaseClient){setStatus("bookingBetStatus","Supabase is not configured.","error");return;}
+  const stake=Number($("stakeInput").value);
+  if(!Number.isFinite(stake)||stake<=0){setStatus("bookingBetStatus","Enter a stake greater than GH₵0.00.","error");return;}
+  if(!selectedMarkets.length||selectedMarkets.some(m=>!m.marketId)){
+    setStatus("bookingBetStatus","Refresh the matches and select saved database markets before placing a bet.","error");return;
+  }
+  const marketIds=[...new Set(selectedMarkets.map(m=>m.marketId))];
+  if(marketIds.length!==selectedMarkets.length){setStatus("bookingBetStatus","Remove duplicate market selections before placing the bet.","error");return;}
+  button.disabled=true;
+  setStatus("bookingBetStatus","Submitting bet securely…");
+  try{
+    const {data,error}=await supabaseClient.rpc("bluestake_place_bet",{p_stake:stake,p_market_ids:marketIds});
+    if(error)throw error;
+    setStatus("bookingBetStatus","Bet placed successfully. Opening My Bets…","ok");
+    selectedMarkets.splice(0,selectedMarkets.length);
+    renderBookingCode();
+    document.querySelectorAll("#matches .market.selected").forEach(b=>{b.classList.remove("selected");b.setAttribute("aria-pressed","false");});
+    await refreshWalletBalance();
+    await setView("bets");
+    showMyBetsTab("open");
+    await loadMyBets();
+  }catch(err){
+    setStatus("bookingBetStatus","Bet was not placed: "+(err.message||"Supabase rejected the request")+". Your wallet should only be charged if the server confirms the bet.","error");
+    button.disabled=!(currentUser&&Number($("stakeInput").value)>0&&selectedMarkets.length>0&&selectedMarkets.every(m=>m.marketId));
+  }
+});
 
 $("authButton").addEventListener("click",()=>currentUser ? signOut() : (setAuthMode("login"),showAuth()));
 $("registerButton").addEventListener("click",()=>{setAuthMode("signup");showAuth();});
@@ -1380,7 +1455,7 @@ function parseGoalEvents(raw){return String(raw||"").split(",").map(v=>v.trim())
 function fixtureClock(match){const start=new Date(match.kickoff_at).getTime(),rawElapsed=Math.floor((Date.now()-start)/60000);if(!Number.isFinite(start)||rawElapsed<0)return {status:"scheduled",minute:0,label:"UPCOMING"};const elapsed=rawElapsed;if(elapsed<45)return {status:"first_half",minute:elapsed,label:"LIVE"};if(elapsed<60)return {status:"half_time",minute:45,label:"HT"};if(elapsed<105)return {status:"second_half",minute:elapsed-15,label:"LIVE"};return {status:"full_time",minute:90,label:"FT"};}
 function goalsAtMinute(match,minute){return (match.events||[]).filter(g=>Number(g.minute)<=minute);}
 function fixtureScore(match,minute){const goals=goalsAtMinute(match,minute);return {home:goals.filter(g=>g.team==="H").length,away:goals.filter(g=>g.team==="A").length};}
-function renderFixtureCard(m,detail=false){const clock=fixtureClock(m);if(clock.status==="full_time")return "";const score=fixtureScore(m,clock.minute);const markets=m.markets||[];const grouped={};markets.forEach(x=>{(grouped[x.market_name] ||= []).push(x);});const groups=Object.entries(grouped).map(([name,items])=>`<div class="market-group"><h4>${escapeHtml(name)}</h4><div class="market-grid">${items.map(x=>`<button type="button" class="market ${selectedMarkets.some(s=>s.fixtureId===m.id && s.market===(x.market_name+" · "+x.selection_name))?"selected":""}" data-fixture-market="${escapeHtml(m.id)}" data-market="${escapeHtml(x.market_name+" · "+x.selection_name)}" data-odds="${Number(x.odds)}"><small>${escapeHtml(x.selection_name)}</small>${Number(x.odds).toFixed(2)}</button>`).join("")}</div></div>`).join("");const goalFeed=goalsAtMinute(m,clock.minute).map(g=>`<div>⚽ ${Number(g.minute)}′ — ${g.team==="H"?escapeHtml(m.home_team):escapeHtml(m.away_team)} goal</div>`).join("")||"No goals yet";const live=clock.status==="first_half"||clock.status==="second_half";const preview=Object.entries(grouped).slice(0,1).map(([name,items])=>`<div class="market-group"><h4>${escapeHtml(name)}</h4><div class="market-grid">${items.slice(0,3).map(x=>`<div class="market"><small>${escapeHtml(x.selection_name)}</small>${Number(x.odds).toFixed(2)}</div>`).join("")}</div></div>`).join("");return `<article class="match" data-fixture-id="${escapeHtml(m.id)}"><div class="league"><span>${escapeHtml(m.competition||"Football")}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${clock.label}${live?" · "+clock.minute+"′":clock.status==="half_time"?" · 15-minute break":""}</span></div><div class="match-body"><div class="match-top"><span>${live?"Live match":"Match centre"}</span><span>${clock.status==="scheduled"?new Date(m.kickoff_at).toLocaleString():"Match centre"}</span></div><div class="teams"><div>${escapeHtml(m.home_team)}</div><div class="vs">${clock.status==="scheduled"?"VS":score.home+" - "+score.away}</div><div>${escapeHtml(m.away_team)}</div></div>${detail?`<button type="button" class="tracker-launch" data-toggle-tracker="${escapeHtml(m.id)}" aria-expanded="false"><span class="tracker-icon">⚽</span><span>Match tracker<small>Tap to open the animated pitch and match timeline</small></span><span style="margin-left:auto">▾</span></button><section class="tracker-panel" data-tracker-panel="${escapeHtml(m.id)}" aria-label="Match tracker"><div class="tracker-panel-head"><span>Details · Match tracker</span><button type="button" data-toggle-tracker="${escapeHtml(m.id)}">Close ✕</button></div><div class="tracker-scorebar"><div class="tracker-team">${escapeHtml(m.home_team)}</div><div><div class="tracker-score">${score.home} : ${score.away}</div><div class="tracker-minute">${clock.status==="scheduled"?"Not started":clock.status==="half_time"?"HALF-TIME":clock.status==="full_time"?"FULL TIME":`${clock.minute}′ ${clock.label}`}</div></div><div class="tracker-team">${escapeHtml(m.away_team)}</div></div><div class="tracker-pitch"><svg viewBox="0 0 700 400" preserveAspectRatio="none" aria-hidden="true"><polyline class="tracker-pass-trail" points="120,200 220,150 330,220 460,140 560,210" fill="none" stroke="#fff8a8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="12 12" opacity=".9"/><rect x="18" y="18" width="664" height="364" rx="3" fill="none" stroke="#e7fff0" stroke-opacity=".78" stroke-width="3"/><line x1="350" y1="18" x2="350" y2="382" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><circle cx="350" cy="200" r="63" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><circle cx="350" cy="200" r="3" fill="#e7fff0"/><rect x="18" y="105" width="105" height="190" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><rect x="18" y="150" width="42" height="100" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><rect x="577" y="105" width="105" height="190" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><rect x="640" y="150" width="42" height="100" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/></svg><span class="tracker-runner home"></span><span class="tracker-runner away"></span><span class="tracker-ball">⚽</span></div></section><div id="marketSelectionStatus" class="status" aria-live="polite"></div><div class="fixture-markets">${groups||'<div class="notice">No open markets are available for this match.</div>'}</div>`:`${preview}<div class="match-tap-hint" aria-hidden="true"></div>`}</div></article>`;}
+function renderFixtureCard(m,detail=false){const clock=fixtureClock(m);if(clock.status==="full_time")return "";const score=fixtureScore(m,clock.minute);const markets=m.markets||[];const grouped={};markets.forEach(x=>{(grouped[x.market_name] ||= []).push(x);});const groups=Object.entries(grouped).map(([name,items])=>`<div class="market-group"><h4>${escapeHtml(name)}</h4><div class="market-grid">${items.map(x=>`<button type="button" class="market ${selectedMarkets.some(s=>s.fixtureId===m.id && s.market===(x.market_name+" · "+x.selection_name))?"selected":""}" data-fixture-market="${escapeHtml(m.id)}" data-market-id="${escapeHtml(x.id)}" data-market="${escapeHtml(x.market_name+" · "+x.selection_name)}" data-odds="${Number(x.odds)}"><small>${escapeHtml(x.selection_name)}</small>${Number(x.odds).toFixed(2)}</button>`).join("")}</div></div>`).join("");const goalFeed=goalsAtMinute(m,clock.minute).map(g=>`<div>⚽ ${Number(g.minute)}′ — ${g.team==="H"?escapeHtml(m.home_team):escapeHtml(m.away_team)} goal</div>`).join("")||"No goals yet";const live=clock.status==="first_half"||clock.status==="second_half";const preview=Object.entries(grouped).slice(0,1).map(([name,items])=>`<div class="market-group"><h4>${escapeHtml(name)}</h4><div class="market-grid">${items.slice(0,3).map(x=>`<div class="market"><small>${escapeHtml(x.selection_name)}</small>${Number(x.odds).toFixed(2)}</div>`).join("")}</div></div>`).join("");return `<article class="match" data-fixture-id="${escapeHtml(m.id)}"><div class="league"><span>${escapeHtml(m.competition||"Football")}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${clock.label}${live?" · "+clock.minute+"′":clock.status==="half_time"?" · 15-minute break":""}</span></div><div class="match-body"><div class="match-top"><span>${live?"Live match":"Match centre"}</span><span>${clock.status==="scheduled"?new Date(m.kickoff_at).toLocaleString():"Match centre"}</span></div><div class="teams"><div>${escapeHtml(m.home_team)}</div><div class="vs">${clock.status==="scheduled"?"VS":score.home+" - "+score.away}</div><div>${escapeHtml(m.away_team)}</div></div>${detail?`<button type="button" class="tracker-launch" data-toggle-tracker="${escapeHtml(m.id)}" aria-expanded="false"><span class="tracker-icon">⚽</span><span>Match tracker<small>Tap to open the animated pitch and match timeline</small></span><span style="margin-left:auto">▾</span></button><section class="tracker-panel" data-tracker-panel="${escapeHtml(m.id)}" aria-label="Match tracker"><div class="tracker-panel-head"><span>Details · Match tracker</span><button type="button" data-toggle-tracker="${escapeHtml(m.id)}">Close ✕</button></div><div class="tracker-scorebar"><div class="tracker-team">${escapeHtml(m.home_team)}</div><div><div class="tracker-score">${score.home} : ${score.away}</div><div class="tracker-minute">${clock.status==="scheduled"?"Not started":clock.status==="half_time"?"HALF-TIME":clock.status==="full_time"?"FULL TIME":`${clock.minute}′ ${clock.label}`}</div></div><div class="tracker-team">${escapeHtml(m.away_team)}</div></div><div class="tracker-pitch"><svg viewBox="0 0 700 400" preserveAspectRatio="none" aria-hidden="true"><polyline class="tracker-pass-trail" points="120,200 220,150 330,220 460,140 560,210" fill="none" stroke="#fff8a8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="12 12" opacity=".9"/><rect x="18" y="18" width="664" height="364" rx="3" fill="none" stroke="#e7fff0" stroke-opacity=".78" stroke-width="3"/><line x1="350" y1="18" x2="350" y2="382" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><circle cx="350" cy="200" r="63" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><circle cx="350" cy="200" r="3" fill="#e7fff0"/><rect x="18" y="105" width="105" height="190" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><rect x="18" y="150" width="42" height="100" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><rect x="577" y="105" width="105" height="190" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/><rect x="640" y="150" width="42" height="100" fill="none" stroke="#e7fff0" stroke-opacity=".7" stroke-width="3"/></svg><span class="tracker-runner home"></span><span class="tracker-runner away"></span><span class="tracker-ball">⚽</span></div></section><div id="marketSelectionStatus" class="status" aria-live="polite"></div><div class="fixture-markets">${groups||'<div class="notice">No open markets are available for this match.</div>'}</div>`:`${preview}<div class="match-tap-hint" aria-hidden="true"></div>`}</div></article>`;}
 async function loadFixtures(){if(!supabaseClient){$("matches").innerHTML='<div class="notice">Supabase is not configured.</div>';return;}$("matches").innerHTML='<div class="notice">Loading fixtures…</div>';try{if(currentUser){await supabaseClient.rpc("bluestake_sync_match_clocks");}const {data:matches,error}=await supabaseClient.from("bluestake_matches").select("id,home_team,away_team,competition,kickoff_at,match_status,source_type,is_published,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(100);if(error)throw error;const ids=(matches||[]).map(m=>m.id);let markets=[],events=[];if(ids.length){const mr=await supabaseClient.from("bluestake_markets").select("id,match_id,market_name,selection_name,odds,is_open").in("match_id",ids).eq("is_open",true);if(mr.error)throw mr.error;markets=mr.data||[];const er=await supabaseClient.from("bluestake_match_goal_events").select("id,match_id,goal_minute,team_side").in("match_id",ids).order("goal_minute");if(!er.error)events=er.data||[];}fixtureCache=(matches||[]).map(m=>({...m,markets:markets.filter(x=>x.match_id===m.id),events:events.filter(x=>x.match_id===m.id).map(x=>({minute:x.goal_minute,team:x.team_side})),_marketsOpen:false}));const visible=fixtureCache.filter(m=>fixtureClock(m).status!=="full_time").sort((a,b)=>{const aa=a.source_type==="admin_simulated"?0:1,bb=b.source_type==="admin_simulated"?0:1;return aa-bb||new Date(b.created_at)-new Date(a.created_at);});$("matches").innerHTML=visible.length?visible.map(renderFixtureCard).join(""):'<div class="notice">No active fixtures are available. Matches appear here after an admin creates and publishes them or an authorized fixtures feed is connected.</div>';if($("adminMatchList"))$("adminMatchList").innerHTML=fixtureCache.length?fixtureCache.map(m=>`<div class="selection"><div><strong>${escapeHtml(m.home_team)} vs ${escapeHtml(m.away_team)}</strong><div class="muted">${escapeHtml(m.match_status||fixtureClock(m).status)} · ${new Date(m.kickoff_at).toLocaleString()}</div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill">${fixtureClock(m).label}</span><button type="button" class="btn secondary" data-edit-fixture="${escapeHtml(m.id)}">Edit</button><button type="button" class="btn secondary" data-delete-fixture="${escapeHtml(m.id)}">Delete</button></div></div>`).join(""):'No fixtures created yet.';}catch(err){$("matches").innerHTML=`<div class="notice">Could not load matches: ${escapeHtml(err.message||"database error")}. Apply the BLUSTAKE match migration in Supabase and check table permissions.</div>`;if($("adminMatchList"))$("adminMatchList").textContent=err.message||"Could not load matches.";}}
 function openMatchDetails(matchId){const match=fixtureCache.find(x=>x.id===matchId);if(!match)return;$("matchDetailsContent").innerHTML=renderFixtureCard(match,true);$("matchDetailsModal").classList.add("open");document.body.style.overflow="hidden";}
 function closeMatchDetails(){$("matchDetailsModal").classList.remove("open");document.body.style.overflow="";}
@@ -1400,7 +1475,7 @@ document.addEventListener("click",function(e){
   const market=button.getAttribute("data-market")||"Selection";
   const index=selectedMarkets.findIndex(x=>String(x.fixtureId)===fixtureId && x.market===market);
   if(index>=0) selectedMarkets.splice(index,1);
-  else selectedMarkets.push({match:match.home_team+" vs "+match.away_team,market,odds,fixtureId:match.id});
+  else selectedMarkets.push({match:match.home_team+" vs "+match.away_team,market,odds,fixtureId:match.id,marketId:button.getAttribute("data-market-id")||""});
   document.querySelectorAll(".market[data-fixture-market]").forEach(b=>{
     if(String(b.getAttribute("data-fixture-market"))===fixtureId && b.getAttribute("data-market")===market){
       b.classList.toggle("selected",index<0);
