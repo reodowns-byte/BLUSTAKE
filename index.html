@@ -207,6 +207,97 @@ body{background:#f3f7fb;color:#142b3d}
 #view-booking-code .selection{align-items:center;gap:12px}
 #view-booking-code .selection button{padding:8px 10px;border-radius:8px;background:#e9f3f8;color:#075b91}
 
+
+/* BLUSTAKE profile screen, adapted from reference while keeping blue/white palette */
+.profile-hero{margin:0 -14px 0;padding:22px 18px 18px;background:linear-gradient(145deg,#06345a 0%,#075b91 55%,#0d77b8 100%);color:#fff}
+.profile-top{display:flex;align-items:center;gap:13px;min-width:0}
+.profile-avatar{width:76px;height:76px;border-radius:50%;flex:0 0 76px;display:grid;place-items:center;background:linear-gradient(135deg,#fff,#cfeeff);border:4px solid #62d5f2;color:#075b91;font-size:29px;font-weight:1000;box-shadow:0 2px 12px #001a2a50}
+.profile-identity{min-width:0;flex:1}
+.profile-name-line{display:flex;align-items:center;gap:10px;font-size:22px;min-width:0}
+.profile-name-line strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-chevron{font-size:32px;color:#b8e7ff;line-height:1}
+.profile-tier{font-size:13px;color:#d5eaf7;margin-top:14px}
+.tier-medal{color:#62d5f2;font-size:19px;margin:0 4px}
+.profile-settings{background:#ffffff15;color:#fff;border:1px solid #ffffff2b;border-radius:50%;width:43px;height:43px;font-size:25px;flex:0 0 43px}
+.profile-progress{height:7px;background:#ffffff30;border-radius:20px;margin:17px 0 23px;overflow:hidden}
+.profile-progress span{display:block;height:100%;width:68%;background:#62d5f2;border-radius:20px}
+.profile-balance-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:15px;margin-bottom:22px}
+.profile-balance-row strong{font-size:24px;white-space:nowrap}
+.profile-balance-row strong span{font-size:17px;color:#b8e7ff}
+.profile-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.profile-actions button{min-height:58px;border-radius:7px;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;gap:12px}
+.profile-deposit{background:#fff;color:#075b91;border:1px solid #fff}
+.profile-withdraw{background:transparent;color:#fff;border:1px solid #b8e7ff!important}
+.profile-actions button span{font-size:22px}
+.profile-rewards{margin-top:18px;width:100%;min-height:82px;border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:12px;text-align:left;background:linear-gradient(110deg,#174c77,#092d4c);color:#fff;border:1px solid #ffffff20}
+.reward-art{font-size:12px;line-height:1.2;letter-spacing:1px;font-weight:900;color:#fff;background:#ffffff16;border-radius:8px;padding:10px;min-width:110px}
+.reward-art strong{font-size:19px;color:#62d5f2}
+.reward-copy{display:flex;flex-direction:column;gap:5px;flex:1}
+.reward-copy small{font-size:11px;color:#d0e7f5}
+.reward-copy strong{font-size:15px;color:#62d5f2}
+.reward-arrow{font-size:30px}
+.profile-shortcuts{margin-top:18px;border-radius:13px;background:#ffffff15;display:grid;grid-template-columns:repeat(3,1fr);padding:13px 4px}
+.profile-shortcuts button{background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;text-align:center;font-size:12px;line-height:1.3;min-height:88px;padding:5px;border-right:1px solid #ffffff35}
+.profile-shortcuts button:last-child{border-right:0}
+.shortcut-icon{font-size:26px}
+.profile-menu{background:#fff;margin:0 -14px;padding:0 16px 18px}
+.profile-menu-row{width:100%;display:flex;align-items:center;gap:14px;background:#fff;color:#27384a;border-bottom:1px solid #e8eef3;text-align:left;padding:17px 0;min-height:67px}
+.menu-symbol{width:28px;flex:0 0 28px;text-align:center;font-size:23px;color:#075b91;font-weight:800}
+.menu-title{font-size:16px;flex:1}
+.menu-trailing{color:#718497;font-size:13px;white-space:nowrap}
+.profile-count{display:inline-block;padding:4px 9px;border-radius:14px;background:#dff4ff;color:#075b91;font-weight:900}
+.profile-feedback{padding:0 0 10px}
+@media(min-width:700px){#view-profile{max-width:780px;margin:auto}.profile-hero,.profile-menu{margin-left:0;margin-right:0;border-radius:14px}.profile-menu{margin-top:12px;border:1px solid #dce6ee;padding:0 18px 18px}}
+@media(max-width:460px){.profile-hero{padding:18px 14px 15px}.profile-avatar{width:64px;height:64px;flex-basis:64px}.profile-name-line{font-size:19px}.profile-balance-row strong{font-size:21px}.profile-actions button{font-size:16px;min-height:54px}.profile-menu-row{min-height:63px;padding:15px 0}.menu-title{font-size:15px}}
+
+
+/* Deposit screen styled to match the reference layout using BLUSTAKE blue and white */
+.deposit-page{min-height:calc(100vh - 145px);margin:0 -14px;padding:18px 20px 34px;background:#f4f8fc;color:#15334a}
+.deposit-page-header{display:flex;align-items:center;gap:13px;padding:0 0 17px;border-bottom:1px solid #dce6ee}
+.deposit-back{width:44px;height:44px;flex:0 0 44px;border-radius:50%;background:#e7f1f8;border:1px solid #d0e0eb;color:#075b91;font-size:30px;line-height:1}
+.deposit-page-header h1{font-size:20px;color:#075b91;font-weight:900;margin:0;flex:1}
+.deposit-balance-pill{display:flex;align-items:center;gap:8px;border-radius:25px;padding:11px 14px;background:#075b91;color:#fff;font-size:13px;box-shadow:0 5px 15px #075b9120}
+.deposit-balance-pill strong{font-size:13px;color:#fff}
+.deposit-tabs{margin:17px 0 28px;display:grid;grid-template-columns:1fr 1fr;padding:5px;gap:5px;border:1px solid #d5e2ec;border-radius:18px;background:#eaf2f8}
+.deposit-tabs button{min-height:47px;border-radius:13px;background:transparent;color:#718497;font-size:15px;font-weight:850}
+.deposit-tabs button.active{background:#075b91;color:#fff;box-shadow:0 2px 6px #075b9120}
+.deposit-content h2{font-size:29px;letter-spacing:-.8px;margin:0 0 7px;color:#15334a}
+.deposit-subtitle{margin:0;color:#718497;font-size:15px;font-weight:650}
+.deposit-amount-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:52px 0 45px}
+.deposit-amount-line>span{font-size:23px;font-weight:900;color:#075b91}
+.deposit-amount-input{width:65%;min-width:0;border:0;outline:0;background:transparent;color:#15334a;text-align:right;font-size:clamp(42px,11vw,64px);font-weight:950;padding:0}
+.deposit-amount-input:focus{box-shadow:0 2px 0 #62d5f2}
+.deposit-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:22px}
+.deposit-presets button{min-width:0;min-height:56px;border:1px solid #bfd5e5;border-radius:16px;background:#fff;color:#075b91;font-weight:900;font-size:15px}
+.deposit-presets button.active{background:#075b91;color:#fff;border-color:#075b91;box-shadow:0 4px 12px #075b9120}
+.deposit-continue{width:100%;min-height:64px;border-radius:40px;background:#075b91;color:#fff;font-size:19px;font-weight:950;box-shadow:0 12px 24px #075b9125}
+.deposit-continue:active{transform:translateY(1px)}
+.deposit-status{margin-top:14px}
+.deposit-security-note{font-size:12px;line-height:1.6;color:#718497;margin-top:17px}
+.deposit-hidden-status{display:none}
+@media(min-width:700px){.deposit-page{max-width:700px;margin:0 auto;border-radius:18px;min-height:700px;padding:24px 28px}.deposit-content{max-width:600px;margin:0 auto}.deposit-page-header{margin-bottom:0}}
+@media(max-width:380px){.deposit-page{padding-left:14px;padding-right:14px}.deposit-presets{gap:6px}.deposit-presets button{font-size:13px;min-height:52px}.deposit-amount-line{margin:42px 0 36px}}
+
+
+/* Mobile-money number step after choosing a deposit amount */
+.payment-details-page{min-height:calc(100vh - 145px)}
+.payment-change-amount{margin:0 0 24px;background:transparent;color:#075b91;font-size:15px;font-weight:850;padding:0}
+.payment-details-content h2{font-size:29px;letter-spacing:-.8px;margin:0 0 30px;color:#15334a}
+.momo-providers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:28px}
+.momo-providers button{min-width:0;min-height:56px;padding:8px 4px;border:1px solid #bfd5e5;border-radius:28px;background:#fff;color:#718497;font-weight:850;font-size:clamp(11px,3vw,14px)}
+.momo-providers button.active{background:#eaf5fc;color:#075b91;border:2px solid #075b91}
+.momo-number-field{display:flex;align-items:center;gap:12px;min-height:82px;border:1px solid #bfd5e5;border-radius:25px;padding:0 18px;margin-bottom:28px;background:#fff;color:#075b91}
+.momo-number-field>span{font-size:27px;line-height:1}
+.momo-number-field strong{font-size:21px;white-space:nowrap}
+.momo-number-field input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#15334a;font-size:clamp(21px,5.7vw,29px);font-weight:850;padding:8px 0}
+.momo-number-field input::placeholder{color:#a3b2bf}
+.momo-number-field:focus-within{border-color:#075b91;box-shadow:0 0 0 3px #075b9115}
+.payment-total-row{min-height:82px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;margin-bottom:28px;border:1px solid #b9dceb;border-radius:25px;background:#eaf5fc}
+.payment-total-row span{font-size:15px;font-weight:750;color:#718497}
+.payment-total-row strong{font-size:clamp(21px,5.5vw,29px);font-weight:950;color:#075b91;white-space:nowrap}
+#continueToGateway{min-height:66px}
+@media(max-width:380px){.payment-details-page{padding-left:14px;padding-right:14px}.momo-providers{gap:5px}.momo-providers button{font-size:10px}.momo-number-field{gap:8px;padding:0 12px}.momo-number-field strong{font-size:18px}.payment-total-row{padding:14px}}
+
 </style>
 </head>
 <body>
@@ -298,27 +389,110 @@ body{background:#f3f7fb;color:#142b3d}
     </div>
   </section>
 
-  <section id="view-wallet" class="view hidden">
-    <div class="layout">
-      <div>
-        <section class="section">
-          <h2>Wallet overview</h2>
-          <p class="muted">Your displayed balance must be sourced from the authenticated server-side wallet ledger. This starter page does not invent or credit a balance.</p>
-          <div class="stats"><div class="stat"><small>Available balance</small><strong id="walletBalance">—</strong></div><div class="stat"><small>Funding milestone</small><strong id="fundingStatus">Checking…</strong></div></div>
-          <p id="walletStatus" class="status" role="status" aria-live="polite"></p>
-        </section>
-        <section class="section">
-          <h2>Deposit funds</h2>
-          <p class="muted">Minimum initial deposit: <strong>GH₵300</strong>. A payment is only credited after the server independently verifies it with the payment provider.</p>
-          <label for="depositAmount">Deposit amount (GH₵)</label>
-          <input id="depositAmount" class="field" type="number" min="300" step="0.01" placeholder="Minimum GH₵300">
-          <button id="depositButton" class="btn full">Start deposit request</button>
-          <p id="depositStatus" class="status" role="status" aria-live="polite"></p>
-          <div class="notice">Payment gateway initiation is not connected in this starter file. Do not send money until the AlphaPay server endpoint and verification webhook have been configured and tested.</div>
-        </section>
+  <section id="view-profile" class="view hidden">
+    <div class="profile-hero">
+      <div class="profile-top">
+        <div class="profile-avatar" id="profileAvatar">B</div>
+        <div class="profile-identity">
+          <div class="profile-name-line"><strong id="profileDisplayName">BLUSTAKE Player</strong><span class="profile-chevron">›</span></div>
+          <div class="profile-tier">Loyalty Tier: <span class="tier-medal">◆</span> <strong>Member</strong></div>
+        </div>
+        <button type="button" class="profile-settings" id="profileSettings" aria-label="Account settings">⚙</button>
       </div>
-      <div>
+      <div class="profile-progress"><span></span></div>
+      <div class="profile-balance-row"><span>Total Balance</span><strong id="profileBalance">GH₵ — <span aria-hidden="true">⊙</span></strong></div>
+      <div class="profile-actions">
+        <button type="button" class="profile-deposit" id="profileDeposit"><span>▣</span> Deposit</button>
+        <button type="button" class="profile-withdraw" id="profileWithdraw"><span>⇄</span> Withdraw</button>
+      </div>
+      <button type="button" class="profile-rewards" id="profileRewards">
+        <span class="reward-art">BLUSTAKE<br><strong>Rewards</strong></span>
+        <span class="reward-copy"><small>Total Potential Rewards</small><strong>Explore rewards</strong></span><span class="reward-arrow">›</span>
+      </button>
+      <div class="profile-shortcuts">
+        <button type="button" id="profileBetHistory"><span class="shortcut-icon">▤</span><span>Sports Bet History</span></button>
+        <button type="button" id="profileTransactions"><span class="shortcut-icon">⟳</span><span>Transaction<br>Records</span></button>
+        <button type="button" id="profileGifts"><span class="shortcut-icon">♙</span><span>Gifts &amp;<br>Rewards</span></button>
+      </div>
+    </div>
+    <div class="profile-menu">
+      <button type="button" class="profile-menu-row" id="profileSurvivor"><span class="menu-symbol">🏆</span><span class="menu-title">BLUSTAKE Survivor</span><span class="menu-trailing">Explore ›</span></button>
+      <button type="button" class="profile-menu-row" id="profileSocial"><span class="menu-symbol">♟</span><span class="menu-title">BLUSTAKE Community</span><span class="menu-trailing">View ›</span></button>
+      <button type="button" class="profile-menu-row" id="profileStreak"><span class="menu-symbol">♨</span><span class="menu-title">Daily Streak</span><span class="menu-trailing"><span class="profile-count">—</span> ›</span></button>
+      <button type="button" class="profile-menu-row" id="profileSupport"><span class="menu-symbol">☏</span><span class="menu-title">Customer Service</span><span class="menu-trailing">Help ›</span></button>
+      <button type="button" class="profile-menu-row" id="profileNotifications"><span class="menu-symbol">♧</span><span class="menu-title">Notification Center</span><span class="menu-trailing">›</span></button>
+      <button type="button" class="profile-menu-row" id="profileRate"><span class="menu-symbol">♡</span><span class="menu-title">Rate Our App</span><span class="menu-trailing">›</span></button>
+      <button type="button" class="profile-menu-row" id="profileHowTo"><span class="menu-symbol">ⓘ</span><span class="menu-title">How to play</span><span class="menu-trailing">›</span></button>
+      <button type="button" class="profile-menu-row" id="profileIdea"><span class="menu-symbol">♧</span><span class="menu-title">Share an Idea</span><span class="menu-trailing">›</span></button>
+      <button type="button" class="profile-menu-row" id="profileUpdate"><span class="menu-symbol">⟳</span><span class="menu-title">Update App</span><span class="menu-trailing">Current ›</span></button>
+      <button type="button" class="profile-menu-row" id="profileSignOut"><span class="menu-symbol">⇥</span><span class="menu-title">Sign out</span><span class="menu-trailing">›</span></button>
+      <p class="profile-feedback status" id="profileFeedback" role="status" aria-live="polite"></p>
+    </div>
+  </section>
 
+  <section id="view-wallet" class="view hidden">
+    <div class="deposit-page">
+      <header class="deposit-page-header">
+        <button type="button" class="deposit-back" id="depositBack" aria-label="Back to profile">‹</button>
+        <h1>Deposit</h1>
+        <div class="deposit-balance-pill">▣ <strong id="walletBalance">GH₵ —</strong></div>
+      </header>
+      <div class="deposit-tabs" role="tablist" aria-label="Wallet actions">
+        <button type="button" class="active" id="depositTab" role="tab" aria-selected="true">↙ &nbsp; Deposit</button>
+        <button type="button" id="withdrawTab" role="tab" aria-selected="false">↗ &nbsp; Withdraw</button>
+      </div>
+      <div class="deposit-content">
+        <h2>How much?</h2>
+        <p class="deposit-subtitle">Minimum deposit GH₵300</p>
+        <div class="deposit-amount-line">
+          <span>GH₵</span>
+          <input id="depositAmount" class="deposit-amount-input" type="number" inputmode="decimal" min="300" step="1" value="300" aria-label="Deposit amount in Ghana cedis">
+        </div>
+        <div class="deposit-presets" aria-label="Choose deposit amount">
+          <button type="button" class="active" data-deposit-amount="300">300</button>
+          <button type="button" data-deposit-amount="500">500</button>
+          <button type="button" data-deposit-amount="1000">1,000</button>
+          <button type="button" data-deposit-amount="2000">2,000</button>
+        </div>
+        <button id="depositButton" class="deposit-continue">Continue</button>
+        <p id="depositStatus" class="status deposit-status" role="status" aria-live="polite"></p>
+        <p class="deposit-security-note">Deposits are only credited after payment is independently verified. AlphaPay checkout is not connected yet, so no payment will be initiated from this page.</p>
+        <div class="deposit-hidden-status" aria-hidden="true">
+          <strong id="fundingStatus">Checking…</strong>
+          <p id="walletStatus" class="status" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="view-payment-details" class="view hidden">
+    <div class="deposit-page payment-details-page">
+      <header class="deposit-page-header">
+        <button type="button" class="deposit-back" id="paymentBack" aria-label="Change deposit amount">‹</button>
+        <h1>Deposit</h1>
+        <div class="deposit-balance-pill">▣ <strong id="paymentWalletBalance">GH₵ —</strong></div>
+      </header>
+      <div class="deposit-tabs" role="tablist" aria-label="Wallet actions">
+        <button type="button" class="active" id="paymentDepositTab" role="tab" aria-selected="true">↙ &nbsp; Deposit</button>
+        <button type="button" id="paymentWithdrawTab" role="tab" aria-selected="false">↗ &nbsp; Withdraw</button>
+      </div>
+      <button type="button" class="payment-change-amount" id="changeDepositAmount">← &nbsp; Change amount</button>
+      <div class="payment-details-content">
+        <h2>MoMo number</h2>
+        <div class="momo-providers" role="group" aria-label="Choose mobile money network">
+          <button type="button" class="active" data-momo-provider="MTN MoMo">MTN MoMo</button>
+          <button type="button" data-momo-provider="Telecel Cash">Telecel Cash</button>
+          <button type="button" data-momo-provider="AirtelTigo">AirtelTigo</button>
+        </div>
+        <label class="momo-number-field">
+          <span aria-hidden="true">▯</span>
+          <strong>+233</strong>
+          <input id="momoPhoneNumber" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="Phone number" aria-label="Mobile money phone number">
+        </label>
+        <div class="payment-total-row"><span>You'll pay</span><strong id="paymentTotalAmount">GH₵300.00</strong></div>
+        <button type="button" class="deposit-continue" id="continueToGateway">Continue to payment</button>
+        <p class="status deposit-status" id="gatewayStatus" role="status" aria-live="polite"></p>
+        <p class="deposit-security-note">Your payment will only be credited after the payment provider confirms the transaction securely. Payment gateway connection is not yet configured; this screen will not charge you or credit your wallet.</p>
       </div>
     </div>
   </section>
@@ -441,6 +615,79 @@ function setView(view) {
 }
 document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click",()=>setView(b.dataset.view)));
 document.getElementById("openWalletFromWithdrawal")?.addEventListener("click",()=>setView("wallet"));
+document.getElementById("paymentBack")?.addEventListener("click",()=>setView("wallet"));
+document.getElementById("changeDepositAmount")?.addEventListener("click",()=>setView("wallet"));
+document.getElementById("paymentWithdrawTab")?.addEventListener("click",()=>setView("withdrawal"));
+document.querySelectorAll("[data-momo-provider]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    document.querySelectorAll("[data-momo-provider]").forEach(b=>b.classList.toggle("active",b===button));
+    $("gatewayStatus").textContent="";
+  });
+});
+$("continueToGateway")?.addEventListener("click",()=>{
+  const phone=$("momoPhoneNumber").value.replace(/\\D/g,"");
+  const provider=document.querySelector("[data-momo-provider].active")?.dataset.momoProvider||"MTN MoMo";
+  if(!currentUser){showAuth();setStatus("gatewayStatus","Sign in before starting a deposit.","error");return;}
+  if(!/^(0[0-9]{9}|[0-9]{9})$/.test(phone)){
+    setStatus("gatewayStatus","Enter a valid Ghana mobile money number.","error");
+    $("momoPhoneNumber").focus();
+    return;
+  }
+  setStatus("gatewayStatus",provider+" selected. The payment gateway is not connected yet, so no charge has been initiated and your wallet has not been credited.","error");
+});
+
+
+document.getElementById("depositBack")?.addEventListener("click",()=>{
+  if(currentUser){setView("profile");}else{setView("sports");}
+});
+document.querySelectorAll("[data-deposit-amount]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    $("depositAmount").value=button.dataset.depositAmount;
+    document.querySelectorAll("[data-deposit-amount]").forEach(b=>b.classList.toggle("active",b===button));
+    setStatus("depositStatus","","");
+  });
+});
+$("depositAmount")?.addEventListener("input",()=>{
+  const value=Number($("depositAmount").value);
+  document.querySelectorAll("[data-deposit-amount]").forEach(b=>b.classList.toggle("active",Number(b.dataset.depositAmount)===value));
+});
+$("depositTab")?.addEventListener("click",()=>{
+  $("depositTab").classList.add("active");$("depositTab").setAttribute("aria-selected","true");
+  $("withdrawTab").classList.remove("active");$("withdrawTab").setAttribute("aria-selected","false");
+});
+$("withdrawTab")?.addEventListener("click",()=>setView("withdrawal"));
+
+
+function updateProfileHeader(){
+  const user=currentUser;
+  const meta=user?.user_metadata||{};
+  const name=meta.full_name||meta.username||user?.email?.split("@")[0]||"BLUSTAKE Player";
+  $("profileDisplayName").textContent=name;
+  $("profileAvatar").textContent=(name.trim()[0]||"B").toUpperCase();
+  const balance=$("walletBalance")?.textContent;
+  if(balance && balance!=="—" && balance!=="Checking…") $("profileBalance").innerHTML=escapeHtml(balance)+' <span aria-hidden="true">⊙</span>';
+  else $("profileBalance").innerHTML='GH₵ — <span aria-hidden="true">⊙</span>';
+}
+function profileNotice(message){
+  const el=$("profileFeedback");
+  if(el){el.textContent=message;el.className="profile-feedback status";}
+}
+$("profileDeposit")?.addEventListener("click",()=>setView("wallet"));
+$("profileWithdraw")?.addEventListener("click",()=>setView("withdrawal"));
+$("profileSettings")?.addEventListener("click",()=>profileNotice("Account settings are not configured yet."));
+$("profileBetHistory")?.addEventListener("click",()=>setView("history"));
+$("profileTransactions")?.addEventListener("click",()=>setView("history"));
+$("profileGifts")?.addEventListener("click",()=>profileNotice("BLUSTAKE gifts and rewards will appear here when that feature is connected."));
+["profileRewards","profileSurvivor","profileSocial","profileStreak","profileNotifications","profileRate","profileHowTo","profileIdea","profileUpdate"].forEach(id=>$(id)?.addEventListener("click",()=>profileNotice("This BLUSTAKE section is not connected yet.")));
+$("profileSupport")?.addEventListener("click",()=>profileNotice("Customer support contact details have not been configured yet."));
+$("profileSignOut")?.addEventListener("click",async()=>{
+  if(supabaseClient) await supabaseClient.auth.signOut();
+  currentUser=null;
+  updateProfileHeader();
+  setView("sports");
+  showAuth();
+});
+
 document.getElementById("bottomBetslip")?.addEventListener("click",()=>{
   setView("sports");
   setTimeout(()=>document.querySelector("#view-sports aside")?.scrollIntoView({behavior:"smooth",block:"start"}),40);
@@ -456,8 +703,9 @@ document.getElementById("bottomBookingCode")?.addEventListener("click",()=>{
 });
 document.getElementById("bottomProfile")?.addEventListener("click",()=>{
   if(!currentUser){showAuth();return;}
-  setView("wallet");
-  setTimeout(()=>document.querySelector("#view-wallet .section")?.scrollIntoView({behavior:"smooth",block:"start"}),40);
+  updateProfileHeader();
+  setView("profile");
+  window.scrollTo({top:0,behavior:"smooth"});
 });
 document.querySelectorAll(".quick-category").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll(".quick-category").forEach(x=>x.classList.toggle("active",x===b));
@@ -604,7 +852,12 @@ $("depositButton").addEventListener("click",()=>{
   const amount=Number($("depositAmount").value);
   if(!currentUser){showAuth();setStatus("depositStatus","Sign in before starting a deposit.","error");return;}
   if(!Number.isFinite(amount)||amount<300){setStatus("depositStatus","The minimum initial deposit is GH₵300.","error");return;}
-  setStatus("depositStatus","Deposit form validated. AlphaPay checkout is not connected yet; no payment has been initiated or credited.","error");
+  $("paymentTotalAmount").textContent="GH₵"+amount.toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});
+  $("paymentWalletBalance").textContent=$("walletBalance")?.textContent||"GH₵ —";
+  setStatus("gatewayStatus","","");
+  $("momoPhoneNumber").value="";
+  setView("payment-details");
+  window.scrollTo({top:0,behavior:"smooth"});
 });
 $("withdrawButton").addEventListener("click",async()=>{
   if(!supabaseClient){setStatus("withdrawStatus","Configure Supabase first.","error");return;}
