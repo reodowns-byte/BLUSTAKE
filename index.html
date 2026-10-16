@@ -411,15 +411,12 @@ body.show-home-hero .hero-carousel{display:block!important}
 .booking-code-primary{width:100%;margin-top:16px;padding:14px;border:0;border-radius:10px;background:#075b91;color:#fff;font-weight:800;font-size:16px}
 @media(max-width:380px){.booking-code-content{padding:18px 12px 14px}.booking-code-summary{gap:5px}.booking-code-summary>div{padding:9px 6px}.booking-code-summary strong{font-size:13px}}
 
-
-.admin-help{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}.match-status{font-weight:900;color:#08764b}.match-status.live{color:#c62828}.match-open{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--blue);font-weight:900;margin-top:12px;width:100%}.market-group{margin-top:14px}.market-group h4{margin:0 0 7px;font-size:12px;color:#61788b}.market-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.market small{font-size:10px}.tracker{background:#073b2d;color:#fff;border-radius:12px;padding:12px;margin-top:12px}.tracker-pitch{position:relative;height:105px;border:1px solid #8ac5a5;border-radius:7px;background:repeating-linear-gradient(90deg,transparent 0,transparent 49.5%,#ffffff22 49.5%,#ffffff22 50.5%);overflow:hidden;margin:9px 0}.tracker-pitch:before{content:"";position:absolute;left:2%;right:2%;top:8%;bottom:8%;border:1px solid #ffffff7a}.tracker-pitch:after{content:"";position:absolute;left:50%;top:8%;bottom:8%;border-left:1px solid #ffffff7a}.tracker-ball{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:21px;transition:left .7s ease,top .7s ease}.tracker-line{font-size:12px;line-height:1.7}.goal-feed{font-size:12px;line-height:1.7;margin-top:8px}.market-group .market{min-width:0}.fixture-tools{display:flex;gap:8px;flex-wrap:wrap}.fixture-tools .field{flex:1;min-width:120px}
-
 </style>
 </head>
 <body class="show-home-hero">
 <header class="header">
   <div class="wrap header-inner">
-    <button type="button" class="brand" id="brandAdminTrigger" aria-label="BLUSTAKE home and authorized admin access" style="background:transparent;border:0;color:inherit;padding:0;text-align:left;cursor:pointer">BLU<span>STAKE</span></button>
+    <div class="brand">BLU<span>STAKE</span></div>
     <nav class="nav" aria-label="Main navigation">
       <button class="active" data-view="sports">Sports</button>
       <button data-view="wallet">Wallet</button>
@@ -483,7 +480,7 @@ body.show-home-hero .hero-carousel{display:block!important}
         <div class="section-head"><h2>Matches & fixtures</h2><button class="btn secondary" id="refreshMatches">Refresh</button></div>
         <div class="filters"><button class="pill active">All sports</button><button class="pill">Football</button><button class="pill">Live</button><button class="pill">Upcoming</button></div>
         <div id="matches">
-          <div class="notice">No verified live fixtures are connected yet. Connect an authorized fixtures feed or clearly labeled admin-created fixtures to display matches here.</div>
+          <div class="notice">No published matches yet. Admin-created simulated matches will appear here when published.</div>
         </div>
       </div>
 
@@ -537,7 +534,7 @@ body.show-home-hero .hero-carousel{display:block!important}
         <button type="button" id="bookBetButton">Book Bet</button>
         <button type="button" id="placeBet" disabled>Place Bet</button>
       </div>
-      <p class="muted booking-note" id="bookingBetStatus">Bet placement becomes available only after an authorized odds feed and secure server-side settlement are configured.</p>
+      <p class="muted booking-note" id="bookingBetStatus">Select odds to build your slip. Bet placement requires the secure wallet-and-settlement SQL migration.</p>
       <strong id="selectionStat" class="hidden">0</strong>
     </div>
   </section>
@@ -714,43 +711,21 @@ body.show-home-hero .hero-carousel{display:block!important}
   <section id="view-admin" class="view hidden">
     <div class="section">
       <h2>BLUSTAKE Admin</h2>
-      <p class="muted">Private administration for the authorized account only. Registration and transaction information is restricted to admin access.</p>
-      <div class="section" style="margin-top:14px">
-        <div class="section-head"><h3>Account & transaction overview</h3><button type="button" class="btn secondary" id="refreshAdminOverview">Refresh overview</button></div>
-        <div class="stats" id="adminOverviewStats"><div class="stat"><small>Registered accounts</small><strong>—</strong></div><div class="stat"><small>Deposit records</small><strong>—</strong></div><div class="stat"><small>Withdrawal requests</small><strong>—</strong></div><div class="stat"><small>Wallet ledger entries</small><strong>—</strong></div></div>
-        <p class="status" id="adminOverviewStatus" role="status">Admin data loads after your account is verified.</p>
-        <div class="divider"></div><h3>Registered accounts</h3><div id="adminUsersList" class="muted">Not loaded.</div>
-        <div class="divider"></div><h3>Recent deposits</h3><div id="adminDepositsList" class="muted">Not loaded.</div>
-        <div class="divider"></div><h3>Recent withdrawal requests</h3><div id="adminWithdrawalsList" class="muted">Not loaded.</div>
-        <div class="divider"></div><h3>Recent wallet ledger entries</h3><div id="adminLedgerList" class="muted">Not loaded.</div>
-      </div>
-      <div class="divider"></div>
-      <p class="muted">Create and manage BLUSTAKE fixtures. Created fixtures use the same match-card layout as the main list. Admin-created match simulations should not be mistaken for independently verified real-world fixtures.</p>
-      <div class="notice">Apply the supplied Supabase SQL migration before creating fixtures. Match clock, score events and markets are stored centrally so signed-in accounts see the same state.</div>
+      <p class="muted">Admin-only controls. Match scores and goal events entered here are simulated by BLUSTAKE; they are not a verified live sports feed.</p>
       <div class="admin-grid">
-        <div><label for="adminHomeTeam">Home team</label><input id="adminHomeTeam" class="field" placeholder="Team A" autocomplete="off"></div>
-        <div><label for="adminAwayTeam">Away team</label><input id="adminAwayTeam" class="field" placeholder="Team B" autocomplete="off"></div>
-        <div><label for="adminLeague">League / category</label><input id="adminLeague" class="field" placeholder="BLUSTAKE Matchday" autocomplete="off"></div>
-        <div><label for="adminKickoff">Kick-off time</label><input id="adminKickoff" class="field" type="datetime-local"></div>
-        <div><label for="adminFinalHome">Target home score</label><input id="adminFinalHome" class="field" type="number" min="0" max="20" value="2"></div>
-        <div><label for="adminFinalAway">Target away score</label><input id="adminFinalAway" class="field" type="number" min="0" max="20" value="1"></div>
+        <div><label for="adminHomeTeam">Home team</label><input id="adminHomeTeam" class="field" placeholder="Team A"></div>
+        <div><label for="adminAwayTeam">Away team</label><input id="adminAwayTeam" class="field" placeholder="Team B"></div>
+        <div><label for="adminLeague">League / competition</label><input id="adminLeague" class="field" placeholder="League name"></div>
+        <div><label for="adminKickoff">Kick-off time (your local time)</label><input id="adminKickoff" class="field" type="datetime-local"></div>
+        <div><label for="adminFinalHome">Configured home final score</label><input id="adminFinalHome" class="field" type="number" min="0" max="20" value="2"></div>
+        <div><label for="adminFinalAway">Configured away final score</label><input id="adminFinalAway" class="field" type="number" min="0" max="20" value="1"></div>
+        <div style="grid-column:1/-1"><label for="adminGoalsHome">Home goal minutes (comma separated)</label><input id="adminGoalsHome" class="field" placeholder="e.g. 12, 68"></div>
+        <div style="grid-column:1/-1"><label for="adminGoalsAway">Away goal minutes (comma separated)</label><input id="adminGoalsAway" class="field" placeholder="e.g. 37"></div>
       </div>
-      <label for="adminGoalEvents">Goal times (example: 18:H,37:A,52:H)</label>
-      <input id="adminGoalEvents" class="field" placeholder="18:H,37:A,52:H" value="18:H,37:A,52:H">
-      <p class="admin-help">H = home goal, A = away goal. The configured events should add up to the target score. Match timing: 45 minutes, 15-minute half-time break, then 45 minutes.</p>
-      <label>Markets & odds</label>
-      <div class="admin-grid">
-        <div><label for="oddHome">Home win</label><input id="oddHome" class="field" type="number" min="1.01" step="0.01" value="2.10"></div>
-        <div><label for="oddDraw">Draw</label><input id="oddDraw" class="field" type="number" min="1.01" step="0.01" value="3.20"></div>
-        <div><label for="oddAway">Away win</label><input id="oddAway" class="field" type="number" min="1.01" step="0.01" value="3.40"></div>
-        <div><label for="oddOver15">Over 1.5 goals</label><input id="oddOver15" class="field" type="number" min="1.01" step="0.01" value="1.35"></div>
-        <div><label for="oddUnder25">Under 2.5 goals</label><input id="oddUnder25" class="field" type="number" min="1.01" step="0.01" value="1.85"></div>
-        <div><label for="oddGG">Both teams score — Yes</label><input id="oddGG" class="field" type="number" min="1.01" step="0.01" value="1.90"></div>
-      </div>
-      <button class="btn full" id="saveFixture">Create match with markets</button>
+      <p class="muted">Goal minutes must match the configured final score. The match clock runs 45 minutes, a 15-minute half-time interval, then 45 minutes of second-half play.</p>
+      <button class="btn full" id="saveFixture">Create simulated match</button>
       <p id="adminStatus" class="status" role="status"></p>
-      <div class="divider"></div><div class="section-head"><h3>Created matches</h3><button class="btn secondary" id="refreshAdminMatches" type="button">Refresh</button></div>
-      <div id="adminMatchList" class="muted">Sign in as an admin to manage fixtures.</div>
+      <div class="divider"></div><h3>Published matches</h3><div id="adminMatchList" class="muted">Sign in as admin to manage matches.</div>
     </div>
   </section>
   <nav class="bottom-nav" aria-label="Bottom navigation">
@@ -817,12 +792,7 @@ function money(n) {
 }
 function showAuth() { $("authModal").classList.add("open"); }
 function hideAuth() { $("authModal").classList.remove("open"); }
-async function setView(view) {
-  if (view === "admin") {
-    const allowed = await isAuthorizedAdmin();
-    if (!allowed) { alert("Admin access is restricted to reodowns@gmail.com."); return; }
-    loadAdminOverview();
-  }
+function setView(view) {
   document.querySelectorAll(".view").forEach(el => el.classList.add("hidden"));
   const target = $("view-" + view); if (target) target.classList.remove("hidden");
   document.body.classList.toggle("show-home-hero", view === "sports");
@@ -987,7 +957,7 @@ function renderBookingCode(){
   }
   const stake=Number($("stakeInput")?.value||0);
   $("potentialReturn").textContent=money(stake*odds);
-  $("placeBet").disabled=true;
+  $("placeBet").disabled=!(selectedMarkets.length && stake>0 && currentUser && supabaseClient);
 }
 document.getElementById("matches")?.addEventListener("click",e=>{
   const button=e.target.closest(".market");
@@ -999,12 +969,13 @@ document.getElementById("matches")?.addEventListener("click",e=>{
   const teams=card.querySelector(".teams");
   const match=teams?teams.innerText.replace(/\n+/g," vs ").trim():"Selected match";
   const market=(button.dataset.market || button.innerText.replace(/\s+/g," ").trim());
-  const fixtureId=button.dataset.fixtureMarket||card.dataset.fixtureId||"";
-  const existing=selectedMarkets.findIndex(m=>m.match===match && m.market===market);
-  if(existing>=0){ selectedMarkets.splice(existing,1); button.classList.remove("selected"); }
-  else { selectedMarkets.push({match,market,odds,fixtureId}); button.classList.add("selected"); }
+  const matchId=button.dataset.matchId||card.dataset.matchId||null;
+  const marketId=button.dataset.marketId||null;
+  const existing=selectedMarkets.findIndex(m=>m.matchId===matchId && m.marketId===marketId && m.market===market);
+  if(existing>=0) selectedMarkets.splice(existing,1);
+  else selectedMarkets.push({match,market,odds,matchId,marketId});
   renderBookingCode();
-  setView("booking-code");
+  button.classList.toggle("selected",existing<0);
 });
 document.getElementById("slipItems")?.addEventListener("click",e=>{
   const remove=e.target.closest("[data-remove-selection]");
@@ -1039,6 +1010,12 @@ bookingKeypad?.addEventListener("click",e=>{
   else if(key==="."&&!input.value.includes("."))input.value=input.value?input.value+".":"0.";
   else if(key!=="."&&key!=="back")input.value+=key;
   renderBookingCode();
+});
+document.getElementById("placeBet")?.addEventListener("click",async()=>{
+ if(!currentUser){showAuth();setStatus('bookingBetStatus','Sign in before placing a bet.','error');return;}
+ const stake=Number($('stakeInput').value||0);
+ if(!selectedMarkets.length||!Number.isFinite(stake)||stake<=0){setStatus('bookingBetStatus','Choose odds and enter a valid stake.','error');return;}
+ setStatus('bookingBetStatus','The secure wallet-and-bet settlement RPC must be installed before this slip can debit a balance. No bet has been placed.','error');
 });
 document.getElementById("clearBookingSelections")?.addEventListener("click",()=>{
   selectedMarkets=[];
@@ -1135,82 +1112,80 @@ $("authForm").addEventListener("submit",async e=>{
   } catch(err) {setStatus("authStatus",err.message||"Authentication failed.","error");}
   finally {$("authSubmit").disabled=false;}
 });
-const AUTHORIZED_ADMIN_EMAIL = "reodowns@gmail.com";
-let isAdminRoleVerified = false;
-async function isAuthorizedAdmin() {
-  if (!supabaseClient || !currentUser || String(currentUser.email||"").toLowerCase() !== AUTHORIZED_ADMIN_EMAIL) return false;
-  try {
-    const {data,error}=await supabaseClient.rpc("bluestake_is_admin");
-    isAdminRoleVerified=!error && data===true;
-    return isAdminRoleVerified;
-  } catch (_) { isAdminRoleVerified=false; return false; }
+// BLUSTAKE match and admin integration
+let isBluStakeAdmin=false;
+function parseMinutes(value){return value.split(',').map(x=>x.trim()).filter(Boolean).map(Number);}
+function defaultMarkets(home,away){
+ const h=Number(home),a=Number(away),out=[];
+ const add=(market,selection,odds)=>out.push({market_name:market,selection_name:selection,odds});
+ add('Match Result','Home',2.10);add('Match Result','Draw',3.20);add('Match Result','Away',3.10);
+ [0.5,1.5,2.5,3.5,4.5].forEach(n=>{add('Total Goals Over '+n,'Over '+n,1.75);add('Total Goals Over '+n,'Under '+n,2.00);});
+ add('Both Teams To Score','Yes',1.85);add('Both Teams To Score','No',1.90);
+ add('Double Chance','Home or Draw',1.35);add('Double Chance','Draw or Away',1.55);add('Double Chance','Home or Away',1.30);
+ add('Half Time Result','Home',2.30);add('Half Time Result','Draw',2.00);add('Half Time Result','Away',3.40);
+ add('Odd/Even','Odd',1.90);add('Odd/Even','Even',1.90);
+ add('Correct Score',`${h}-${a}`,8.00);
+ return out;
 }
-function adminRows(targetId, rows, fields, emptyText) {
-  const target=$(targetId); if(!target)return;
-  if(!rows || !rows.length){target.innerHTML=`<p class="muted">${escapeHtml(emptyText)}</p>`;return;}
-  target.innerHTML=rows.map(row=>{
-    const primary=fields.map(f=>row[f]).find(v=>v!==undefined && v!==null && String(v)!=="");
-    const detail=Object.entries(row).filter(([k,v])=>v!==null && v!==undefined && !["id","user_id","created_at"].includes(k)).slice(0,4).map(([k,v])=>`${escapeHtml(k.replaceAll("_"," "))}: ${escapeHtml(typeof v==="object"?JSON.stringify(v):String(v))}`).join(" · ");
-    return `<div class="selection"><div><strong>${escapeHtml(primary===undefined?"Record":String(primary))}</strong><div class="muted">${escapeHtml(row.created_at?new Date(row.created_at).toLocaleString():row.id||"")}</div><div class="muted">${detail}</div></div></div>`;
-  }).join("");
+async function loadBluStakeMatches(){
+ const root=$("matches"); if(!root||!supabaseClient)return;
+ try{
+  await supabaseClient.rpc('bluestake_sync_match_clocks');
+  const {data:matches,error}=await supabaseClient.from('bluestake_matches').select('id,home_team,away_team,competition,kickoff_at,match_status,score_home,score_away,final_home,final_away,is_simulated,source_type').eq('is_published',true).order('kickoff_at',{ascending:true}).limit(100);
+  if(error)throw error;
+  const active=(matches||[]).filter(m=>m.match_status!=='full_time');
+  if(!active.length){root.innerHTML='<div class="notice">No published matches currently available.</div>';return;}
+  const {data:markets,mError}=await supabaseClient.from('bluestake_markets').select('id,match_id,market_name,selection_name,odds,is_open').in('match_id',active.map(m=>m.id)).eq('is_open',true);
+  root.innerHTML=active.map(m=>{
+   const mm=(markets||[]).filter(x=>x.match_id===m.id);
+   const status=({'scheduled':'UPCOMING','first_half':'LIVE · 1ST HALF','half_time':'HALF-TIME','second_half':'LIVE · 2ND HALF','full_time':'FULL-TIME'})[m.match_status]||String(m.match_status||'UPCOMING').toUpperCase();
+   const time=m.match_status==='scheduled'?new Date(m.kickoff_at).toLocaleString():status;
+   const odds=mm.map(x=>`<button class="market" data-market-id="${x.id}" data-match-id="${m.id}" data-market="${escapeHtml(x.market_name+' · '+x.selection_name)}" data-odds="${Number(x.odds)}"><small>${escapeHtml(x.market_name)}</small>${escapeHtml(x.selection_name)}<br><b>${Number(x.odds).toFixed(2)}</b></button>`).join('');
+   return `<article class="match" data-match-id="${m.id}"><div class="league"><span>${escapeHtml(m.competition||'Football')}</span><span>${m.is_simulated?'SIMULATED · ':''}${escapeHtml(status)}</span></div><div class="match-body"><div class="match-top"><span>${escapeHtml(time)}</span><span>${m.match_status==='first_half'||m.match_status==='second_half'?'● LIVE':''}</span></div><div class="teams"><div>${escapeHtml(m.home_team)}</div><strong>${Number(m.score_home||0)} - ${Number(m.score_away||0)}</strong><div>${escapeHtml(m.away_team)}</div></div><div class="markets">${odds||'<div class="muted">No open markets</div>'}</div><p class="muted">${m.is_simulated?'Admin-configured simulation.':'Fixture'}</p></div></article>`;
+  }).join('');
+ }catch(e){root.innerHTML='<div class="notice">Could not load matches: '+escapeHtml(e.message||'database error')+'</div>';}
 }
-async function loadAdminOverview() {
-  if(!(await isAuthorizedAdmin())) { setStatus("adminOverviewStatus","Admin access denied.","error"); return; }
-  setStatus("adminOverviewStatus","Loading account and transaction records…");
-  const queries=[
-    ["profiles","bluestake_profiles","*"],
-    ["deposits","bluestake_deposits","*"],
-    ["withdrawals","bluestake_withdrawal_requests","*"],
-    ["ledger","bluestake_wallet_ledger","*"]
-  ];
-  const results={};
-  try {
-    for(const [key,table,columns] of queries){
-      const q=await supabaseClient.from(table).select(columns).order("created_at",{ascending:false}).limit(50);
-      if(q.error) throw new Error(table+": "+q.error.message);
-      results[key]=q.data||[];
-    }
-    $("adminOverviewStats").innerHTML=[
-      ["Registered accounts",results.profiles.length],
-      ["Deposit records",results.deposits.length],
-      ["Withdrawal requests",results.withdrawals.length],
-      ["Wallet ledger entries",results.ledger.length]
-    ].map(([label,value])=>`<div class="stat"><small>${label} (latest 50)</small><strong>${value}</strong></div>`).join("");
-    adminRows("adminUsersList",results.profiles,["email","display_name","full_name","phone","user_id"],"No registered accounts found.");
-    adminRows("adminDepositsList",results.deposits,["status","amount","reference","provider","user_id"],"No deposit records found.");
-    adminRows("adminWithdrawalsList",results.withdrawals,["status","amount","user_id"],"No withdrawal requests found.");
-    adminRows("adminLedgerList",results.ledger,["entry_type","transaction_type","amount","user_id"],"No wallet ledger entries found.");
-    setStatus("adminOverviewStatus","Loaded latest records. Full registration history may require pagination.","ok");
-  } catch(err) {
-    setStatus("adminOverviewStatus","Could not load admin records: "+(err.message||"database error")+". Apply the admin-read SQL policies provided with this update.","error");
-  }
+async function loadAdminMatchList(){
+ const el=$('adminMatchList');if(!el||!isBluStakeAdmin||!supabaseClient)return;
+ try{const {data,error}=await supabaseClient.from('bluestake_matches').select('id,home_team,away_team,kickoff_at,match_status,is_published,source_type').eq('source_type','admin_simulated').order('created_at',{ascending:false}).limit(50);if(error)throw error;
+ el.innerHTML=(data||[]).map(m=>`<div class="selection"><div><strong>${escapeHtml(m.home_team)} vs ${escapeHtml(m.away_team)}</strong><div class="muted">${escapeHtml(m.match_status)} · ${new Date(m.kickoff_at).toLocaleString()}</div></div><button class="btn secondary" data-delete-match="${m.id}">Delete</button></div>`).join('')||'No admin-created matches.';
+ }catch(e){el.textContent='Could not load matches: '+(e.message||'database error');}
 }
-$("refreshAdminOverview")?.addEventListener("click",loadAdminOverview);
-$("brandAdminTrigger")?.addEventListener("click",async()=>{
-  if(!currentUser){setView("sports");return;}
-  if(String(currentUser.email||"").toLowerCase()!==AUTHORIZED_ADMIN_EMAIL){setView("sports");return;}
-  if(await isAuthorizedAdmin()) setView("admin");
-  else alert("This account does not have the authorized BLUSTAKE admin role.");
+$('adminMatchList')?.addEventListener('click',async e=>{const b=e.target.closest('[data-delete-match]');if(!b)return;if(!confirm('Delete this admin-created match?'))return;try{const {error}=await supabaseClient.rpc('bluestake_admin_delete_match',{p_match_id:b.dataset.deleteMatch});if(error)throw error;setStatus('adminStatus','Match deleted.','ok');await loadAdminMatchList();await loadBluStakeMatches();}catch(err){setStatus('adminStatus',err.message||'Could not delete match.','error');}});
+$('saveFixture')?.addEventListener('click',async()=>{
+ if(!supabaseClient||!currentUser){showAuth();setStatus('adminStatus','Sign in with the admin account first.','error');return;}
+ const home=$('adminHomeTeam').value.trim(),away=$('adminAwayTeam').value.trim(),league=$('adminLeague').value.trim();
+ const dt=$('adminKickoff').value,fh=Number($('adminFinalHome').value),fa=Number($('adminFinalAway').value);
+ const hg=parseMinutes($('adminGoalsHome').value),ag=parseMinutes($('adminGoalsAway').value);
+ if(!home||!away||!dt){setStatus('adminStatus','Enter both teams and kick-off time.','error');return;}
+ if(hg.length!==fh||ag.length!==fa){setStatus('adminStatus','The number of goal minutes must match each configured final score.','error');return;}
+ const goals=[...hg.map(minute=>({minute,team:'H'})),...ag.map(minute=>({minute,team:'A'}))];
+ if(goals.some(g=>!Number.isInteger(g.minute)||g.minute<1||g.minute>90)){setStatus('adminStatus','Goal minutes must be whole numbers from 1 to 90.','error');return;}
+ const markets=defaultMarkets(fh,fa);const b=$('saveFixture');b.disabled=true;
+ try{const {data,error}=await supabaseClient.rpc('bluestake_admin_create_match',{p_home_team:home,p_away_team:away,p_competition:league||'BLUSTAKE Football',p_kickoff_at:new Date(dt).toISOString(),p_final_home:fh,p_final_away:fa,p_goal_events:goals,p_markets:markets});if(error)throw error;setStatus('adminStatus','Match created successfully. Reference: '+data,'ok');await loadAdminMatchList();await loadBluStakeMatches();}
+ catch(err){setStatus('adminStatus',err.message||'Could not create match. Ensure the match-system SQL migration has been run.','error');}finally{b.disabled=false;}
 });
+document.querySelector('.brand')?.addEventListener('click',async()=>{if(!currentUser){showAuth();return;}try{const {data,error}=await supabaseClient.rpc('bluestake_is_admin');if(error)throw error;if(data){setView('admin');await loadAdminMatchList();}else setStatus('walletStatus','Admin access is restricted to approved admin accounts.','error');}catch(e){setStatus('walletStatus','Admin role could not be verified.','error');}});
+setInterval(()=>{if(supabaseClient){loadBluStakeMatches();}},15000);
 
 async function refreshSession() {
   if(!supabaseClient)return;
   const {data,error}=await supabaseClient.auth.getUser();
   currentUser=error?null:data.user;
   $("authButton").textContent=currentUser?"Sign out":"Sign in";
-  $("adminNav").classList.add("hidden");
+  // Admin authorization is checked by the database role function, never by email alone.
+  $("adminNav").classList.add("hidden"); isBluStakeAdmin=false;
   $("walletBalance").textContent="—";
-  if(currentUser) {
+  if(currentUser){
+    try{const ar=await supabaseClient.rpc('bluestake_is_admin');isBluStakeAdmin=!ar.error&&ar.data===true;if(isBluStakeAdmin)$('adminNav').classList.remove('hidden');}catch(_){isBluStakeAdmin=false;}
     await refreshFundingStatus();
-    try { const role=await supabaseClient.rpc("bluestake_is_admin"); if(String(currentUser.email||"").toLowerCase()===AUTHORIZED_ADMIN_EMAIL && !role.error && role.data===true) { $("adminNav").classList.remove("hidden"); } } catch(_) {}
   }
-  await loadFixtures();
+  await loadBluStakeMatches();
 }
 async function signOut() {
   if(supabaseClient) await supabaseClient.auth.signOut();
   currentUser=null;$("authButton").textContent="Sign in";
   $("adminNav").classList.add("hidden");setStatus("walletStatus","Signed out.");
-  await loadFixtures();
   setView("sports");
 }
 async function refreshFundingStatus() {
@@ -1280,33 +1255,7 @@ async function loadRequests() {
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 $("refreshFundingStatus")?.addEventListener("click",refreshFundingStatus);
 $("refreshRequests").addEventListener("click",loadRequests);
-document.getElementById("refreshMatches").addEventListener("click",loadFixtures);
-document.getElementById("refreshAdminMatches")?.addEventListener("click",loadFixtures);
-
-const DEFAULT_MARKETS = [
-  {market_name:"Match Result",selection_name:"Home",key:"home",odds:2.10},{market_name:"Match Result",selection_name:"Draw",key:"draw",odds:3.20},{market_name:"Match Result",selection_name:"Away",key:"away",odds:3.40},
-  {market_name:"Total Goals 1.5",selection_name:"Over 1.5",key:"over15",odds:1.35},{market_name:"Total Goals 1.5",selection_name:"Under 1.5",key:"under15",odds:3.00},
-  {market_name:"Total Goals 2.5",selection_name:"Over 2.5",key:"over25",odds:1.95},{market_name:"Total Goals 2.5",selection_name:"Under 2.5",key:"under25",odds:1.85},
-  {market_name:"Total Goals 3.5",selection_name:"Over 3.5",key:"over35",odds:3.30},{market_name:"Total Goals 3.5",selection_name:"Under 3.5",key:"under35",odds:1.30},
-  {market_name:"Both Teams to Score",selection_name:"Yes (GG)",key:"gg",odds:1.90},{market_name:"Both Teams to Score",selection_name:"No (NG)",key:"ng",odds:1.85},
-  {market_name:"Double Chance",selection_name:"Home or Draw",key:"1x",odds:1.30},{market_name:"Double Chance",selection_name:"Draw or Away",key:"x2",odds:1.65},{market_name:"Double Chance",selection_name:"Home or Away",key:"12",odds:1.32},
-  {market_name:"Correct Score",selection_name:"0 - 0",key:"cs00",odds:8.00},{market_name:"Correct Score",selection_name:"1 - 0",key:"cs10",odds:6.50},{market_name:"Correct Score",selection_name:"1 - 1",key:"cs11",odds:6.00},{market_name:"Correct Score",selection_name:"2 - 1",key:"cs21",odds:8.50},{market_name:"Correct Score",selection_name:"2 - 0",key:"cs20",odds:7.50},{market_name:"Correct Score",selection_name:"0 - 1",key:"cs01",odds:7.00},{market_name:"Correct Score",selection_name:"0 - 2",key:"cs02",odds:10.00},{market_name:"Correct Score",selection_name:"2 - 2",key:"cs22",odds:13.00},
-  {market_name:"Half Time Result",selection_name:"Home",key:"hth",odds:2.60},{market_name:"Half Time Result",selection_name:"Draw",key:"htd",odds:2.00},{market_name:"Half Time Result",selection_name:"Away",key:"hta",odds:3.80}
-];
-let fixtureCache=[];
-function parseGoalEvents(raw){return String(raw||"").split(",").map(v=>v.trim()).filter(Boolean).map(v=>{const m=v.match(/^(\d{1,2})\s*:\s*([HA])$/i);if(!m)throw new Error("Goal times must look like 18:H,37:A,52:H.");const minute=Number(m[1]);if(minute<1||minute>90)throw new Error("Goal times must be between minutes 1 and 90.");return {minute,team:m[2].toUpperCase()};}).sort((a,b)=>a.minute-b.minute);}
-function fixtureClock(match){const start=new Date(match.kickoff_at).getTime(),rawElapsed=Math.floor((Date.now()-start)/60000);if(!Number.isFinite(start)||rawElapsed<0)return {status:"scheduled",minute:0,label:"UPCOMING"};const elapsed=rawElapsed;if(elapsed<45)return {status:"first_half",minute:elapsed,label:"LIVE"};if(elapsed<60)return {status:"half_time",minute:45,label:"HT"};if(elapsed<105)return {status:"second_half",minute:elapsed-15,label:"LIVE"};return {status:"full_time",minute:90,label:"FT"};}
-function goalsAtMinute(match,minute){return (match.events||[]).filter(g=>Number(g.minute)<=minute);}
-function fixtureScore(match,minute){const goals=goalsAtMinute(match,minute);return {home:goals.filter(g=>g.team==="H").length,away:goals.filter(g=>g.team==="A").length};}
-function renderFixtureCard(m){const clock=fixtureClock(m);if(clock.status==="full_time")return "";const score=fixtureScore(m,clock.minute);const markets=m.markets||[];const grouped={};markets.forEach(x=>{(grouped[x.market_name] ||= []).push(x);});const groups=Object.entries(grouped).map(([name,items])=>`<div class="market-group"><h4>${escapeHtml(name)}</h4><div class="market-grid">${items.map(x=>`<button type="button" class="market" data-fixture-market="${escapeHtml(m.id)}" data-market="${escapeHtml(x.market_name+" · "+x.selection_name)}" data-odds="${Number(x.odds)}" ${clock.status==="full_time"?"disabled":""}><small>${escapeHtml(x.selection_name)}</small>${Number(x.odds).toFixed(2)}</button>`).join("")}</div></div>`).join("");const goalFeed=goalsAtMinute(m,clock.minute).map(g=>`<div>⚽ ${Number(g.minute)}′ — ${g.team==="H"?escapeHtml(m.home_team):escapeHtml(m.away_team)} goal</div>`).join("")||"No goals yet";const live=clock.status==="first_half"||clock.status==="second_half";return `<article class="match" data-fixture-id="${escapeHtml(m.id)}"><div class="league"><span>${escapeHtml(m.competition||"Football")}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${clock.label}${live?" · "+clock.minute+"′":clock.status==="half_time"?" · 15-minute break":""}</span></div><div class="match-body"><div class="match-top"><span>Match centre</span><span>${clock.status==="scheduled"?new Date(m.kickoff_at).toLocaleString():"Match centre"}</span></div><div class="teams"><div>${escapeHtml(m.home_team)}</div><div class="vs">${clock.status==="scheduled"?"VS":score.home+" - "+score.away}</div><div>${escapeHtml(m.away_team)}</div></div><div class="tracker"><strong>⚽ ${live?"LIVE MATCH TRACKER":clock.status==="half_time"?"HALF-TIME":"MATCH TRACKER"}</strong><div class="tracker-pitch"><span class="tracker-ball" style="left:${Math.max(8,Math.min(92,10+((clock.minute*17)%80)))}%;top:${Math.max(20,Math.min(80,25+((clock.minute*11)%55)))}%">⚽</span></div><div class="tracker-line">${clock.status==="scheduled"?"Kick-off is scheduled.":clock.status==="half_time"?"Half-time break · second half begins after 15 minutes.":`Minute ${clock.minute} · Score ${score.home}-${score.away}`}</div><div class="goal-feed">${goalFeed}</div></div><button type="button" class="match-open" data-toggle-markets="${escapeHtml(m.id)}">${m._marketsOpen?"Hide markets ▲":"View all markets & odds ▼"}</button><div class="fixture-markets ${m._marketsOpen?"":"hidden"}">${groups}</div></div></article>`;}
-async function loadFixtures(){if(!supabaseClient){$("matches").innerHTML='<div class="notice">Supabase is not configured.</div>';return;}$("matches").innerHTML='<div class="notice">Loading fixtures…</div>';try{if(currentUser){await supabaseClient.rpc("bluestake_sync_match_clocks");}const {data:matches,error}=await supabaseClient.from("bluestake_matches").select("id,home_team,away_team,competition,kickoff_at,match_status,source_type,is_published,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(100);if(error)throw error;const ids=(matches||[]).map(m=>m.id);let markets=[],events=[];if(ids.length){const mr=await supabaseClient.from("bluestake_markets").select("id,match_id,market_name,selection_name,odds,is_open").in("match_id",ids).eq("is_open",true);if(mr.error)throw mr.error;markets=mr.data||[];const er=await supabaseClient.from("bluestake_match_goal_events").select("id,match_id,goal_minute,team_side").in("match_id",ids).order("goal_minute");if(!er.error)events=er.data||[];}fixtureCache=(matches||[]).map(m=>({...m,markets:markets.filter(x=>x.match_id===m.id),events:events.filter(x=>x.match_id===m.id).map(x=>({minute:x.goal_minute,team:x.team_side})),_marketsOpen:false}));const visible=fixtureCache.filter(m=>fixtureClock(m).status!=="full_time").sort((a,b)=>{const aa=a.source_type==="admin_simulated"?0:1,bb=b.source_type==="admin_simulated"?0:1;return aa-bb||new Date(b.created_at)-new Date(a.created_at);});$("matches").innerHTML=visible.length?visible.map(renderFixtureCard).join(""):'<div class="notice">No active fixtures are available. Matches appear here after an admin creates and publishes them or an authorized fixtures feed is connected.</div>';if($("adminMatchList"))$("adminMatchList").innerHTML=fixtureCache.length?fixtureCache.map(m=>`<div class="selection"><div><strong>${escapeHtml(m.home_team)} vs ${escapeHtml(m.away_team)}</strong><div class="muted">${escapeHtml(m.match_status||fixtureClock(m).status)} · ${new Date(m.kickoff_at).toLocaleString()}</div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill">${fixtureClock(m).label}</span><button type="button" class="btn secondary" data-edit-fixture="${escapeHtml(m.id)}">Edit</button><button type="button" class="btn secondary" data-delete-fixture="${escapeHtml(m.id)}">Delete</button></div></div>`).join(""):'No fixtures created yet.';}catch(err){$("matches").innerHTML=`<div class="notice">Could not load matches: ${escapeHtml(err.message||"database error")}. Apply the BLUSTAKE match migration in Supabase and check table permissions.</div>`;if($("adminMatchList"))$("adminMatchList").textContent=err.message||"Could not load matches.";}}
-$("matches")?.addEventListener("click",e=>{const toggle=e.target.closest("[data-toggle-markets]");if(toggle){const m=fixtureCache.find(x=>x.id===toggle.dataset.toggleMarkets);if(m){m._marketsOpen=!m._marketsOpen;const card=toggle.closest(".match");const area=card.querySelector(".fixture-markets");area.classList.toggle("hidden",!m._marketsOpen);toggle.textContent=m._marketsOpen?"Hide markets ▲":"View all markets & odds ▼";}return;}});
-$("saveFixture")?.addEventListener("click",async()=>{if(!supabaseClient||!currentUser){setStatus("adminStatus","Sign in with the admin account first.","error");return;}const home=$("adminHomeTeam").value.trim(),away=$("adminAwayTeam").value.trim(),competition=$("adminLeague").value.trim()||"BLUSTAKE Football",kick=$("adminKickoff").value,fh=Number($("adminFinalHome").value),fa=Number($("adminFinalAway").value);if(!home||!away||home.toLowerCase()===away.toLowerCase()||!kick){setStatus("adminStatus","Enter different home/away teams and a kick-off time.","error");return;}if(!Number.isInteger(fh)||!Number.isInteger(fa)||fh<0||fa<0||fh>20||fa>20){setStatus("adminStatus","Final scores must be whole numbers from 0 to 20.","error");return;}let events;try{events=parseGoalEvents($("adminGoalEvents").value);}catch(err){setStatus("adminStatus",err.message,"error");return;}if(events.filter(x=>x.team==="H").length!==fh||events.filter(x=>x.team==="A").length!==fa){setStatus("adminStatus","Goal events must match the target final score. Example for 2–1: 18:H,37:A,52:H.","error");return;}const odds={home:Number($("oddHome").value),draw:Number($("oddDraw").value),away:Number($("oddAway").value),over15:Number($("oddOver15").value),under25:Number($("oddUnder25").value),gg:Number($("oddGG").value)};if(Object.values(odds).some(x=>!Number.isFinite(x)||x<1.01||x>1000)){setStatus("adminStatus","All odds must be at least 1.01 and no more than 1000.","error");return;}const markets=DEFAULT_MARKETS.map(m=>({...m,odds:({home:odds.home,draw:odds.draw,away:odds.away,over15:odds.over15,under25:odds.under25,gg:odds.gg}[m.key]??m.odds)}));
-const targetScoreLabel=fh+" - "+fa;
-if(!markets.some(m=>m.market_name==="Correct Score"&&m.selection_name===targetScoreLabel)){
-  markets.push({market_name:"Correct Score",selection_name:targetScoreLabel,odds:8.50});
-}const btn=$("saveFixture");btn.disabled=true;setStatus("adminStatus","Creating match and markets…");try{const {data,error}=await supabaseClient.rpc("bluestake_admin_create_match",{p_home_team:home,p_away_team:away,p_competition:competition,p_kickoff_at:new Date(kick).toISOString(),p_final_home:fh,p_final_away:fa,p_goal_events:events,p_markets:markets.map(x=>({market_name:x.market_name,selection_name:x.selection_name,odds:x.odds}))});if(error)throw error;setStatus("adminStatus","Match created with markets. It will appear at the top of the active matches list.","ok");$("adminHomeTeam").value="";$("adminAwayTeam").value="";await loadFixtures();}catch(err){setStatus("adminStatus","Could not create match: "+(err.message||"database error")+". Apply the supplied SQL migration first.","error");}finally{btn.disabled=false;}});
-setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
+$("refreshMatches").addEventListener("click",()=>{ $("matches").innerHTML='<div class="notice">No authorized fixture feed is connected yet. Connect the server-side fixtures endpoint to show real matches.</div>'; });
 
 
 // Hero banner carousel: arrows, dots, and touch-swipe left/right.
