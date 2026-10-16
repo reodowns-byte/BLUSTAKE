@@ -706,9 +706,9 @@ body.show-home-hero .hero-carousel{display:block!important}
       <p class="muted">Private administration for the authorized account only. Registration and transaction information is restricted to admin access.</p>
       <div class="section" style="margin-top:14px">
         <h3>Credit or deduct a user's wallet</h3>
-        <p class="muted">Enter the user's registered email and amount in GH₵. This updates their wallet and records the adjustment in the wallet ledger. Only the verified admin can use this control.</p>
-        <label for="adminWalletEmail">User's registered email</label>
-        <input id="adminWalletEmail" class="field" type="email" autocomplete="email" placeholder="user@example.com">
+        <p class="muted">Find the registered user by email address or phone number, then credit or deduct their GH₵ wallet. Every adjustment is recorded in the wallet ledger. Only the verified admin can use this control.</p>
+        <label for="adminWalletEmail">User email or phone number</label>
+        <input id="adminWalletEmail" class="field" type="text" autocomplete="off" inputmode="text" placeholder="user@example.com or 0241234567">
         <div class="admin-grid">
           <div><label for="adminWalletAmount">Amount (GH₵)</label><input id="adminWalletAmount" class="field" type="number" min="0.01" max="1000000" step="0.01" placeholder="0.00"></div>
           <div><label for="adminWalletDirection">Action</label><select id="adminWalletDirection" class="field"><option value="credit">Credit wallet</option><option value="debit">Deduct from wallet</option></select></div>
@@ -1190,27 +1190,27 @@ async function loadAdminOverview() {
 }
 $("adminAdjustWalletButton")?.addEventListener("click", async () => {
   const statusId = "adminWalletAdjustStatus";
-  const email = String($("adminWalletEmail")?.value || "").trim().toLowerCase();
+  const identifier = String($("adminWalletEmail")?.value || "").trim();
   const amount = Number($("adminWalletAmount")?.value);
   const direction = $("adminWalletDirection")?.value;
   const description = String($("adminWalletReason")?.value || "").trim() || "Admin wallet adjustment";
   const button = $("adminAdjustWalletButton");
   if (!(await isAuthorizedAdmin())) { setStatus(statusId, "Admin access denied.", "error"); return; }
-  if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) { setStatus(statusId, "Enter the user's registered email address.", "error"); return; }
+  if (!identifier || identifier.length < 5) { setStatus(statusId, "Enter the user's registered email address or phone number.", "error"); return; }
   if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000) { setStatus(statusId, "Enter a valid amount greater than zero.", "error"); return; }
-  if (!window.confirm(`${direction === "credit" ? "Credit" : "Deduct"} GH₵${amount.toFixed(2)} ${direction === "credit" ? "to" : "from"} ${email}?`)) return;
+  if (!window.confirm(`${direction === "credit" ? "Credit" : "Deduct"} GH₵${amount.toFixed(2)} ${direction === "credit" ? "to" : "from"} the account matching "${identifier}"?`)) return;
   button.disabled = true;
   setStatus(statusId, "Applying wallet adjustment…");
   try {
-    const { data, error } = await supabaseClient.rpc("bluestake_admin_adjust_wallet_by_email", {
-      p_email: email, p_amount: amount, p_direction: direction, p_description: description
+    const { data, error } = await supabaseClient.rpc("bluestake_admin_adjust_wallet_by_identifier", {
+      p_identifier: identifier, p_amount: amount, p_direction: direction, p_description: description
     });
     if (error) throw error;
     setStatus(statusId, `Wallet updated successfully. New balance: GH₵${Number(data).toFixed(2)}.`, "ok");
     $("adminWalletAmount").value = "";
     await loadAdminOverview();
   } catch (err) {
-    setStatus(statusId, "Adjustment failed: " + (err.message || "Database error") + ". Check that the admin wallet SQL function has been installed.", "error");
+    setStatus(statusId, "Adjustment failed: " + (err.message || "Database error") + ". Check that the email-or-phone admin wallet SQL function has been installed.", "error");
   } finally { button.disabled = false; }
 });
 $("refreshAdminOverview")?.addEventListener("click",loadAdminOverview);
