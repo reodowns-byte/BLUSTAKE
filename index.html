@@ -534,7 +534,7 @@ body.show-home-hero .hero-carousel{display:block!important}
         <button type="button" id="bookBetButton">Book Bet</button>
         <button type="button" id="placeBet" disabled>Place Bet</button>
       </div>
-      <p class="muted booking-note" id="bookingBetStatus">Select odds to build your slip. Place a bet using your available GH₵ wallet balance.</p>
+      <p class="muted booking-note" id="bookingBetStatus">Select odds to build your slip. Bet placement requires the secure wallet-and-settlement SQL migration.</p>
       <strong id="selectionStat" class="hidden">0</strong>
     </div>
   </section>
@@ -726,38 +726,6 @@ body.show-home-hero .hero-carousel{display:block!important}
       <button class="btn full" id="saveFixture">Create simulated match</button>
       <p id="adminStatus" class="status" role="status"></p>
       <div class="divider"></div><h3>Published matches</h3><div id="adminMatchList" class="muted">Sign in as admin to manage matches.</div>
-      <div class="divider"></div>
-      <h3>Account & wallet administration</h3>
-      <p class="muted">Admin-only data pulled from Supabase. Wallet credits/debits are recorded in the wallet ledger.</p>
-      <div class="admin-grid">
-        <div><label for="adminTargetUser">User ID (UUID)</label><input id="adminTargetUser" class="field" placeholder="Paste user's Supabase user ID"></div>
-        <div><label for="adminWalletAmount">Amount (GH₵)</label><input id="adminWalletAmount" class="field" type="number" min="0.01" step="0.01" placeholder="100.00"></div>
-        <div><label for="adminWalletDirection">Adjustment</label><select id="adminWalletDirection" class="field"><option value="credit">Credit wallet</option><option value="debit">Debit wallet</option></select></div>
-        <div><label for="adminWalletReason">Reason</label><input id="adminWalletReason" class="field" placeholder="Admin adjustment reason"></div>
-      </div>
-      <button class="btn full" id="adminApplyWallet">Apply wallet adjustment</button>
-      <p id="adminWalletStatus" class="status" role="status"></p>
-      <div class="divider"></div>
-      <div class="section-head"><h3>Users & wallets</h3><button class="btn secondary" id="adminLoadUsers">Refresh users</button></div>
-      <div id="adminUsersList" class="muted">Tap Refresh users to load account records.</div>
-      <div class="divider"></div>
-      <div class="section-head"><h3>Deposits</h3><button class="btn secondary" id="adminLoadDeposits" type="button">Refresh deposits</button></div>
-      <p class="muted">Displays deposit records available to this admin session. Approval/payment actions are not added unless a verified secure backend function exists.</p>
-      <div id="adminDepositsList" class="muted">Tap Refresh deposits to load deposit records.</div>
-      <div class="divider"></div>
-      <div class="section-head"><h3>Withdrawal requests</h3><button class="btn secondary" id="adminLoadWithdrawals" type="button">Refresh withdrawals</button></div>
-      <p class="muted">Requests are for review only. This dashboard does not send money or execute payouts.</p>
-      <div id="adminWithdrawalsList" class="muted">Tap Refresh withdrawals to load requests.</div>
-      <div class="divider"></div>
-      <div class="section-head"><h3>Betting summary</h3><button class="btn secondary" id="adminLoadSummary" type="button">Refresh summary</button></div>
-      <div id="adminSummaryList" class="muted">Tap Refresh summary to calculate totals from recorded bets.</div>
-      <div class="divider"></div>
-      <div class="section-head"><h3>Transactions & ledger</h3><button class="btn secondary" id="adminLoadLedger">Refresh transactions</button></div>
-      <div id="adminLedgerList" class="muted">Tap Refresh transactions to load wallet ledger entries.</div>
-      <div class="divider"></div>
-      <div class="section-head"><h3>Bets & settlement</h3><button class="btn secondary" id="adminLoadBets">Refresh bets</button></div>
-      <div id="adminBetsList" class="muted">Tap Refresh bets to load pending bets.</div>
-      <p class="muted">Creating/authenticating user accounts must use a trusted server or Supabase Edge Function; this browser page intentionally does not expose a service-role key. Withdrawals remain unavailable.</p>
     </div>
   </section>
   <nav class="bottom-nav" aria-label="Bottom navigation">
@@ -1328,64 +1296,6 @@ $("refreshMatches").addEventListener("click",()=>{ $("matches").innerHTML='<div 
     await refreshSession();
   } catch(err){setStatus("walletStatus","Supabase setup error: "+(err.message||"unknown error"),"error");}
 })();
-
-// BLUSTAKE admin account/ledger panels. All writes use protected database RPCs.
-function adminSafe(v){return escapeHtml(v==null?'—':String(v));}
-function adminRequire(){if(!supabaseClient||!currentUser||!isBluStakeAdmin){throw new Error('Sign in with an authorized administrator account.');}}
-async function adminLoadUsers(){try{adminRequire();$('adminUsersList').textContent='Loading…';const [pr,wr]=await Promise.all([supabaseClient.from('bluestake_profiles').select('user_id,display_name,phone,created_at').order('created_at',{ascending:false}).limit(100),supabaseClient.from('bluestake_wallets').select('user_id,balance,currency,updated_at').limit(200)]);if(pr.error)throw pr.error;if(wr.error)throw wr.error;const wallets=new Map((wr.data||[]).map(w=>[w.user_id,w]));$('adminUsersList').innerHTML=(pr.data||[]).map(u=>{const w=wallets.get(u.user_id)||{};return `<div class="notice" style="margin:8px 0"><strong>${adminSafe(u.display_name||'User')}</strong><div class="muted">${adminSafe(u.user_id)}</div><div>${adminSafe(u.phone)} · Registration time: ${adminSafe(u.created_at)}</div><strong>${adminSafe(w.currency||'GHS')} ${Number(w.balance||0).toFixed(2)}</strong><button class="btn secondary" data-admin-user="${adminSafe(u.user_id)}" type="button">Use user ID</button></div>`}).join('')||'No user profiles found.';$('adminUsersList').querySelectorAll('[data-admin-user]').forEach(b=>b.addEventListener('click',()=>{$('adminTargetUser').value=b.dataset.adminUser;}));}catch(e){$('adminUsersList').textContent=e.message||'Could not load users.';}}
-async function adminLoadLedger(){try{adminRequire();$('adminLedgerList').textContent='Loading…';const r=await supabaseClient.from('bluestake_wallet_ledger').select('user_id,transaction_type,amount,direction,reference,description,created_at').order('created_at',{ascending:false}).limit(100);if(r.error)throw r.error;$('adminLedgerList').innerHTML=(r.data||[]).map(x=>`<div class="notice" style="margin:8px 0"><strong>${adminSafe(x.direction).toUpperCase()} GH₵${Number(x.amount).toFixed(2)}</strong><div>${adminSafe(x.transaction_type)} · ${adminSafe(x.description)}</div><div class="muted">User ${adminSafe(x.user_id)} · ${adminSafe(x.created_at)}</div><div class="muted">Ref: ${adminSafe(x.reference)}</div></div>`).join('')||'No ledger transactions found.';}catch(e){$('adminLedgerList').textContent=e.message||'Could not load transactions.';}}
-async function adminLoadBets(){try{adminRequire();$('adminBetsList').textContent='Loading…';const r=await supabaseClient.from('bluestake_bets').select('id,user_id,stake,potential_return,status,created_at').order('created_at',{ascending:false}).limit(100);if(r.error)throw r.error;$('adminBetsList').innerHTML=(r.data||[]).map(x=>`<div class="notice" style="margin:8px 0"><strong>GH₵${Number(x.stake).toFixed(2)} · ${adminSafe(x.status)}</strong><div>User ${adminSafe(x.user_id)}</div><div>Potential return: GH₵${Number(x.potential_return).toFixed(2)}</div><div class="muted">${adminSafe(x.created_at)} · Bet ${adminSafe(x.id)}</div>${x.status==='pending'?`<button type="button" class="btn secondary" data-settle-bet="${adminSafe(x.id)}" data-outcome="won">Settle won</button> <button type="button" class="btn secondary" data-settle-bet="${adminSafe(x.id)}" data-outcome="lost">Settle lost</button>`:''}</div>`).join('')||'No bets found.';$('adminBetsList').querySelectorAll('[data-settle-bet]').forEach(b=>b.addEventListener('click',async()=>{if(!confirm('Settle this bet as '+b.dataset.outcome+'? This action credits a winning return and cannot be repeated.'))return;try{const {error}=await supabaseClient.rpc('bluestake_admin_settle_bet',{p_bet_id:b.dataset.settleBet,p_outcome:b.dataset.outcome});if(error)throw error;await Promise.all([adminLoadBets(),adminLoadLedger(),adminLoadUsers()]);}catch(e){alert(e.message||'Settlement failed.');}}));}catch(e){$('adminBetsList').textContent=e.message||'Could not load bets.';}}
-// Admin registration, deposit, withdrawal and proceeds overview.
-function adminPrettyRows(rows, hostId, emptyText){
- const host=$(hostId); if(!host)return;
- if(!rows||!rows.length){host.textContent=emptyText;return;}
- host.innerHTML=rows.map(row=>{
-  const fields=Object.entries(row).filter(([k])=>!['raw_payload','metadata'].includes(k)).map(([k,v])=>`<div><span class="muted">${adminSafe(k.replace(/_/g,' '))}:</span> ${adminSafe(typeof v==='object'&&v!==null?JSON.stringify(v):v)}</div>`).join('');
-  return `<div class="notice" style="margin:8px 0;overflow-wrap:anywhere">${fields}</div>`;
- }).join('');
-}
-async function adminLoadDeposits(){try{adminRequire();$('adminDepositsList').textContent='Loading deposits…';const r=await supabaseClient.from('bluestake_deposits').select('*').order('created_at',{ascending:false}).limit(100);if(r.error)throw r.error;adminPrettyRows(r.data,'adminDepositsList','No deposit records found.');}catch(e){$('adminDepositsList').textContent='Could not load deposits: '+(e.message||'database error')+'. Confirm the table and admin read policy exist.';}}
-async function adminLoadWithdrawals(){try{adminRequire();$('adminWithdrawalsList').textContent='Loading withdrawal requests…';const r=await supabaseClient.from('bluestake_withdrawal_requests').select('*').order('created_at',{ascending:false}).limit(100);if(r.error)throw r.error;adminPrettyRows(r.data,'adminWithdrawalsList','No withdrawal requests found.');}catch(e){$('adminWithdrawalsList').textContent='Could not load withdrawal requests: '+(e.message||'database error')+'. Confirm the admin read policy exists.';}}
-async function adminLoadSummary(){try{adminRequire();$('adminSummaryList').textContent='Calculating…';const r=await supabaseClient.from('bluestake_bets').select('stake,potential_return,status,created_at').limit(5000);if(r.error)throw r.error;const rows=r.data||[];const sum=(xs,k)=>xs.reduce((a,x)=>a+Number(x[k]||0),0);const pending=rows.filter(x=>x.status==='pending'),won=rows.filter(x=>x.status==='won'),lost=rows.filter(x=>x.status==='lost');const stakeTotal=sum(rows,'stake'),wonReturns=sum(won,'potential_return'),lostStake=sum(lost,'stake');$('adminSummaryList').innerHTML=`<div class="notice"><strong>Recorded bets:</strong> ${rows.length}<br><strong>Pending bets:</strong> ${pending.length}<br><strong>Total stakes recorded:</strong> GH₵${stakeTotal.toFixed(2)}<br><strong>Winning returns credited (based on recorded returns):</strong> GH₵${wonReturns.toFixed(2)}<br><strong>Stakes on settled losing bets:</strong> GH₵${lostStake.toFixed(2)}<p class="muted">These are betting totals, not verified company profit or cash proceeds. Deposits, bonuses, operating costs, and payout liabilities are not reconciled here.</p></div>`;}catch(e){$('adminSummaryList').textContent='Could not calculate summary: '+(e.message||'database error');}}
-$('adminLoadDeposits')?.addEventListener('click',adminLoadDeposits);
-$('adminLoadWithdrawals')?.addEventListener('click',adminLoadWithdrawals);
-$('adminLoadSummary')?.addEventListener('click',adminLoadSummary);
-$('adminLoadUsers')?.addEventListener('click',adminLoadUsers);$('adminLoadLedger')?.addEventListener('click',adminLoadLedger);$('adminLoadBets')?.addEventListener('click',adminLoadBets);
-$('adminApplyWallet')?.addEventListener('click',async()=>{try{adminRequire();const uid=$('adminTargetUser').value.trim(),amount=Number($('adminWalletAmount').value),direction=$('adminWalletDirection').value,description=$('adminWalletReason').value.trim()||'Admin wallet adjustment';if(!uid||!Number.isFinite(amount)||amount<=0)throw new Error('Enter a user UUID and a positive amount.');$('adminApplyWallet').disabled=true;const {data,error}=await supabaseClient.rpc('bluestake_admin_adjust_wallet',{p_user_id:uid,p_amount:amount,p_direction:direction,p_description:description});if(error)throw error;$('adminWalletStatus').textContent='Wallet updated. New balance: GH₵'+Number(data).toFixed(2);await Promise.all([adminLoadUsers(),adminLoadLedger()]);}catch(e){$('adminWalletStatus').textContent=e.message||'Wallet adjustment failed.';}finally{$('adminApplyWallet').disabled=false;}});
-
-// BLUSTAKE real database-backed bet placement.
-// The database RPC validates markets and deducts stake atomically.
-(function wireSecureBetPlacement(){
- const button=document.getElementById('placeBet');
- if(!button || button.dataset.rpcWired==='1') return;
- button.dataset.rpcWired='1';
- button.addEventListener('click', async function(){
-  const status=document.getElementById('bookingBetStatus');
-  try{
-   if(!window.supabaseClient || !window.currentUser && !currentUser) throw new Error('Please sign in before placing a bet.');
-   if(!currentUser) throw new Error('Your session is not ready. Sign in again.');
-   if(!Array.isArray(selectedMarkets)||selectedMarkets.length===0) throw new Error('Select at least one outcome.');
-   const stake=Number(document.getElementById('stakeInput')?.value||0);
-   if(!Number.isFinite(stake)||stake<=0) throw new Error('Enter a valid stake amount.');
-   const ids=selectedMarkets.map(x=>x.marketId).filter(Boolean);
-   if(ids.length!==selectedMarkets.length) throw new Error('One or more selections are not connected to a database market. Refresh matches and select the odds again.');
-   button.disabled=true; button.textContent='Placing bet…';
-   if(status) status.textContent='Submitting bet securely…';
-   const {data,error}=await supabaseClient.rpc('bluestake_place_bet',{p_stake:stake,p_market_ids:ids});
-   if(error) throw error;
-   selectedMarkets=[];
-   document.getElementById('stakeInput').value='';
-   renderBookingCode();
-   if(status) status.textContent='Bet placed successfully. Bet reference: '+String(data);
-   await refreshSession();
-   // Reload the signed-in user's bet history if the existing screen supports it.
-   if(typeof loadMyBets==='function') await loadMyBets();
-   if(typeof refreshMyBets==='function') await refreshMyBets();
-  }catch(err){if(status)status.textContent=err?.message||'Bet placement failed. No success was recorded.';}
-  finally{button.textContent='Place Bet'; if(typeof renderBookingCode==='function')renderBookingCode();}
- });
-})();
-
 </script>
 
   <div id="bookingCodeModal" class="booking-code-modal hidden" role="dialog" aria-modal="true" aria-labelledby="bookingCodeModalTitle">
