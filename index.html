@@ -750,8 +750,9 @@ body.show-home-hero .hero-carousel{display:block!important}
       <div class="section" style="margin-top:14px">
         <h3>Settle a finished bet</h3>
         <p class="muted">Use only after the match result has been verified and the match is marked finished. This calls the secure Supabase settlement function, which updates the bet, selections, wallet and ledger together.</p>
-        <label for="adminSettleBetId">Bet ID</label>
-        <input id="adminSettleBetId" class="field" autocomplete="off" value="d83738dd-3712-4a80-b672-d6cac7c79581" placeholder="Paste the pending bet UUID">
+        <label for="adminSettleBetId">Bet reference</label>
+        <input id="adminSettleBetId" class="field" autocomplete="off" value="B069FFB3" placeholder="Enter short reference or full UUID">
+        <p class="muted">Each bet has its own short reference. Full UUIDs are also accepted.</p>
         <label for="adminSettleOutcome">Verified bet outcome</label>
         <select id="adminSettleOutcome" class="field"><option value="won">Won</option><option value="lost">Lost</option></select>
         <button type="button" class="btn full" id="adminSettleBetButton">Settle bet</button>
@@ -1422,15 +1423,20 @@ $("adminAdjustWalletButton")?.addEventListener("click", async () => {
 });
 $("adminSettleBetButton")?.addEventListener("click", async () => {
   const button = $("adminSettleBetButton");
-  const betId = String($("adminSettleBetId")?.value || "").trim();
+  const enteredRef = String($("adminSettleBetId")?.value || "").trim();
   const outcome = $("adminSettleOutcome")?.value;
   if (!(await isAuthorizedAdmin())) { setStatus("adminSettleBetStatus", "Admin access denied.", "error"); return; }
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(betId)) { setStatus("adminSettleBetStatus", "Enter a valid bet UUID.", "error"); return; }
-  if (!window.confirm(`Settle bet ${betId} as ${String(outcome).toUpperCase()}? This may credit the winning return to the user's wallet.`)) return;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(enteredRef);
+  const shortRef = enteredRef.toUpperCase();
+  if (!isUuid && !/^[A-Z0-9]{6,10}$/.test(shortRef)) { setStatus("adminSettleBetStatus", "Enter a valid short bet reference or full UUID.", "error"); return; }
+  if (!window.confirm(`Settle bet reference ${enteredRef} as ${String(outcome).toUpperCase()}? This may credit the winning return to the user's wallet.`)) return;
   button.disabled = true;
-  setStatus("adminSettleBetStatus", "Checking bet and match status…");
+  setStatus("adminSettleBetStatus", "Looking up bet and checking match status…");
   try {
-    const { data: bet, error: betError } = await supabaseClient.from("bluestake_bets").select("id,status,potential_return").eq("id", betId).maybeSingle();
+    let lookup = supabaseClient.from("bluestake_bets").select("id,status,potential_return");
+    lookup = isUuid ? lookup.eq("id", enteredRef) : lookup.eq("public_ref", shortRef);
+    const { data: bet, error: betError } = await lookup.maybeSingle();
+    const betId = bet?.id;
     if (betError) throw betError;
     if (!bet) throw new Error("Bet not found or admin read access is not configured.");
     if (String(bet.status || "").toLowerCase() !== "pending") throw new Error(`This bet is ${bet.status}; only pending bets can be settled.`);
