@@ -23,6 +23,7 @@
 @media(max-width:600px){.hero-carousel{margin:14px 0;border-radius:16px}.hero-slide img{height:490px;object-fit:cover}.hero-carousel-controls button{width:38px;height:38px}.hero-slide-label{left:14px;bottom:38px}}
 
 @media(max-width:850px){.layout{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.nav button{padding:9px}.header-inner{align-items:flex-start;flex-direction:column}.hero{padding:22px}.admin-grid{grid-template-columns:1fr}}
+@media(max-width:460px){#headerDepositButton{padding:7px 9px;font-size:11px}#headerBalanceButton{max-width:104px;min-width:78px;padding:7px 8px;font-size:10px}.nav{gap:4px}}
 @media(max-width:460px){.wrap{padding:0 11px}.brand{font-size:23px}.section{padding:14px}.markets{gap:5px}.market{font-size:12px;padding:9px 2px}.teams{font-size:13px}.stats{grid-template-columns:1fr 1fr}}
 
 /* BLUSTAKE mobile sportsbook layout inspired by the supplied reference */
@@ -38,6 +39,9 @@ body{background:#fbf8f9;padding-bottom:92px}
 .nav button[data-view]{display:none}
 #authButton{display:inline-flex}
 #registerButton{display:inline-flex;background:#fff;color:#c90020;border-color:#fff}
+#headerDepositButton,#headerBalanceButton{display:none;border-radius:22px;font-weight:900}
+#headerDepositButton{background:#fff;color:#075b91;border-color:#fff}
+#headerBalanceButton{background:#075b91;color:#fff;border-color:#ffffff90;max-width:112px;min-width:88px;padding:8px 9px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
 main.wrap{max-width:780px;padding:0 14px}
 .hero-carousel{margin:7px 0 12px;border-radius:9px;box-shadow:none}
 .hero-slide img{height:230px;object-fit:cover;object-position:center}
@@ -427,6 +431,8 @@ body.show-home-hero .hero-carousel{display:block!important}
       <button data-view="admin" id="adminNav" class="hidden">Admin</button>
       <button id="authButton" class="head-action">Login</button>
       <button id="registerButton" class="head-action" type="button">Register</button>
+      <button id="headerDepositButton" class="head-action" type="button">Deposit</button>
+      <button id="headerBalanceButton" class="head-action" type="button" aria-label="View wallet balance">GH₵ —</button>
     </nav>
   </div>
 </header>
@@ -569,6 +575,7 @@ body.show-home-hero .hero-carousel{display:block!important}
       </div>
     </div>
     <div class="profile-menu">
+      <button type="button" class="profile-menu-row" id="profileMenuDeposit"><span class="menu-symbol">＋</span><span class="menu-title">Deposit</span><span class="menu-trailing">Open deposit ›</span></button>
       <button type="button" class="profile-menu-row" id="profileSurvivor"><span class="menu-symbol">🏆</span><span class="menu-title">BLUSTAKE Survivor</span><span class="menu-trailing">Explore ›</span></button>
       <button type="button" class="profile-menu-row" id="profileSocial"><span class="menu-symbol">♟</span><span class="menu-title">BLUSTAKE Community</span><span class="menu-trailing">View ›</span></button>
       <button type="button" class="profile-menu-row" id="profileStreak"><span class="menu-symbol">♨</span><span class="menu-title">Daily Streak</span><span class="menu-trailing"><span class="profile-count">—</span> ›</span></button>
@@ -820,6 +827,37 @@ function money(n) {
 }
 function showAuth() { $("authModal").classList.add("open"); }
 function hideAuth() { $("authModal").classList.remove("open"); }
+function updateHeaderAccountControls(){
+  const loggedIn=!!currentUser;
+  $("authButton").style.display=loggedIn?"none":"inline-flex";
+  $("registerButton").style.display=loggedIn?"none":"inline-flex";
+  $("headerDepositButton").style.display=loggedIn?"inline-flex":"none";
+  $("headerBalanceButton").style.display=loggedIn?"inline-flex":"none";
+  if(!loggedIn) $("headerBalanceButton").textContent="GH₵ —";
+}
+async function refreshWalletBalance(){
+  if(!supabaseClient || !currentUser){
+    $("walletBalance").textContent="GH₵ —";
+    $("headerBalanceButton").textContent="GH₵ —";
+    updateProfileHeader();
+    return;
+  }
+  $("walletBalance").textContent="Checking…";
+  $("headerBalanceButton").textContent="Checking…";
+  try{
+    const {data,error}=await supabaseClient.from("bluestake_wallets")
+      .select("balance").eq("user_id",currentUser.id).eq("currency","GHS").maybeSingle();
+    if(error) throw error;
+    const shown=money(data?.balance||0);
+    $("walletBalance").textContent=shown;
+    $("headerBalanceButton").textContent=shown;
+  }catch(err){
+    $("walletBalance").textContent="GH₵ —";
+    $("headerBalanceButton").textContent="Balance unavailable";
+    console.warn("Could not load wallet balance",err);
+  }
+  updateProfileHeader();
+}
 async function setView(view) {
   if (view === "admin") {
     const allowed = await isAuthorizedAdmin();
@@ -923,6 +961,7 @@ function profileNotice(message){
   if(el){el.textContent=message;el.className="profile-feedback status";}
 }
 $("profileDeposit")?.addEventListener("click",()=>setView("wallet"));
+$("profileMenuDeposit")?.addEventListener("click",()=>setView("wallet"));
 $("profileWithdraw")?.addEventListener("click",()=>setView("withdrawal"));
 $("profileSettings")?.addEventListener("click",()=>profileNotice("Account settings are not configured yet."));
 $("profileBetHistory")?.addEventListener("click",()=>setView("history"));
@@ -1093,6 +1132,8 @@ renderBookingCode();
 
 $("authButton").addEventListener("click",()=>currentUser ? signOut() : (setAuthMode("login"),showAuth()));
 $("registerButton").addEventListener("click",()=>{setAuthMode("signup");showAuth();});
+$("headerDepositButton").addEventListener("click",()=>setView("wallet"));
+$("headerBalanceButton").addEventListener("click",async()=>{await refreshWalletBalance();setView("wallet");});
 $("closeAuth").addEventListener("click",hideAuth);
 $("loginTab").addEventListener("click",()=>setAuthMode("login"));
 $("signupTab").addEventListener("click",()=>setAuthMode("signup"));
@@ -1226,9 +1267,11 @@ async function refreshSession() {
   const {data,error}=await supabaseClient.auth.getUser();
   currentUser=error?null:data.user;
   $("authButton").textContent=currentUser?"Sign out":"Sign in";
+  updateHeaderAccountControls();
   $("adminNav").classList.add("hidden");
-  $("walletBalance").textContent="—";
+  $("walletBalance").textContent="GH₵ —";
   if(currentUser) {
+    await refreshWalletBalance();
     await refreshFundingStatus();
     try { const role=await supabaseClient.rpc("bluestake_is_admin"); if(String(currentUser.email||"").toLowerCase()===AUTHORIZED_ADMIN_EMAIL && !role.error && role.data===true) { $("adminNav").classList.remove("hidden"); } } catch(_) {}
   }
@@ -1237,6 +1280,8 @@ async function refreshSession() {
 async function signOut() {
   if(supabaseClient) await supabaseClient.auth.signOut();
   currentUser=null;$("authButton").textContent="Sign in";
+  updateHeaderAccountControls();
+  $("walletBalance").textContent="GH₵ —";
   $("adminNav").classList.add("hidden");setStatus("walletStatus","Signed out.");
   await loadFixtures();
   setView("sports");
