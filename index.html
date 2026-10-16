@@ -327,6 +327,17 @@ body.show-home-hero .hero-carousel{display:block!important}
 .mybets-empty span{font-size:17px;font-weight:850}
 .mybets-list{padding:16px}
 .mybets-list .notice{background:#f4f8fc;border:1px solid #dce6ee;border-radius:12px;padding:14px;color:#718497}
+.mybet-card{border:1px solid #d8e3ec;border-radius:12px;background:#fff;margin:0 0 14px;overflow:hidden;box-shadow:0 3px 10px #12344a0b}
+.mybet-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;background:#f2f7fb;border-bottom:1px solid #dce6ee}
+.mybet-state{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:950;color:#176b43}
+.mybet-state.live{color:#c72f32}.mybet-state.scheduled{color:#28608d}.mybet-state.settled{color:#627589}
+.mybet-score{font-size:18px;font-weight:1000;color:#173b58;white-space:nowrap}
+.mybet-match{padding:13px 14px;border-bottom:1px solid #e5edf3}
+.mybet-match:last-of-type{border-bottom:0}.mybet-match-top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:900}
+.mybet-market{font-size:13px;color:#1b5b83;font-weight:900;margin-top:8px}.mybet-selection{font-size:13px;color:#4e6273;margin-top:3px}
+.mybet-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px 14px;background:#f7fafc}
+.mybet-meta small{display:block;color:#7a8c9c;font-size:10px;font-weight:800}.mybet-meta strong{display:block;color:#193c59;font-size:13px;margin-top:4px;overflow-wrap:anywhere}
+.mybet-return{margin:0 14px 14px;padding:11px;border-radius:8px;background:#e1f4e9;color:#176b43;display:flex;justify-content:space-between;gap:8px;font-weight:900;font-size:13px}
 @media(min-width:700px){.mybets-page{max-width:780px;margin:0 auto;border:1px solid #dce6ee;border-radius:0 0 16px 16px;overflow:hidden}.mybets-header{padding-left:24px;padding-right:24px}}
 @media(max-width:380px){.mybets-header{padding:15px 13px}.mybets-brand{font-size:20px}.mybets-balance{padding:8px 9px}.mybets-filters{padding:14px 12px;gap:7px}.mybets-filters button{padding:11px 13px;font-size:13px}}
 
@@ -922,26 +933,70 @@ async function loadMyBets(){
     return;
   }
   const isHistory=!$("betHistoryTab").classList.contains("active");
-  const empty=isHistory?$("betHistoryEmpty"):$("openBetsEmpty");
+  const empty=isHistory?$("betHistoryEmpty"):("openBetsEmpty");
   list.classList.remove("hidden");
   list.innerHTML='<div class="notice">Loading your bets…</div>';
   empty.classList.add("hidden");
   try{
     const {data,error}=await supabaseClient.from("bluestake_bets").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
     if(error)throw error;
-    const rows=(data||[]).filter(b=>{
-      const status=String(b.status||b.bet_status||"").toLowerCase();
-      return isHistory ? (status.includes("settled")||status.includes("won")||status.includes("lost")||status.includes("void")) : !(status.includes("settled")||status.includes("won")||status.includes("lost")||status.includes("void"));
-    });
+    const allBets=data||[];
+    const terminal=s=>["settled","won","lost","void","cancelled","canceled"].some(x=>String(s||"").toLowerCase().includes(x));
+    const rows=allBets.filter(b=>isHistory?terminal(b.status||b.bet_status):!terminal(b.status||b.bet_status));
     if(!rows.length){list.classList.add("hidden");empty.classList.remove("hidden");return;}
-    empty.classList.add("hidden");
+    // Load the saved legs, then resolve each leg to its market and match.
+    let legs=[],markets=[],matches=[];
+    const betIds=rows.map(b=>b.id).filter(Boolean);
+    if(betIds.length){
+      const sr=await supabaseClient.from("bluestake_bet_selections").select("*").in("bet_id",betIds);
+      if(!sr.error)legs=sr.data||[];
+    }
+    const marketIds=[...new Set(legs.map(x=>x.market_id||x.marketId).filter(Boolean))];
+    if(marketIds.length){
+      const mr=await supabaseClient.from("bluestake_markets").select("id,match_id,market_name,selection_name,odds").in("id",marketIds);
+      if(!mr.error)markets=mr.data||[];
+    }
+    const matchIds=[...new Set(markets.map(x=>x.match_id).filter(Boolean))];
+    if(matchIds.length){
+      const fr=await supabaseClient.from("bluestake_matches").select("id,home_team,away_team,competition,kickoff_at,match_status,is_published,created_at").in("id",matchIds);
+      if(!fr.error)matches=fr.data||[];
+    }
+    const marketById=new Map(markets.map(x=>[String(x.id),x]));
+    const matchById=new Map(matches.map(x=>[String(x.id),x]));
+    const statusLabel=(b,related)=>{
+      const raw=String(b.status||b.bet_status||"").toLowerCase();
+      if(terminal(raw))return {label:raw.includes("won")?"WON":raw.includes("lost")?"LOST":raw.includes("void")?"VOID":"SETTLED",cls:"settled"};
+      const clocks=related.map(m=>fixtureClock(m));
+      if(clocks.some(c=>c.status==="first_half"||c.status==="second_half"))return {label:"● LIVE",cls:"live"};
+      if(clocks.some(c=>c.status==="half_time"))return {label:"HALF-TIME",cls:"live"};
+      if(clocks.some(c=>c.status==="full_time"))return {label:"AWAITING SETTLEMENT",cls:"scheduled"};
+      if(related.length)return {label:"MATCH NOT STARTED",cls:"scheduled"};
+      return {label:String(b.status||b.bet_status||"PENDING").toUpperCase(),cls:"scheduled"};
+    };
     list.innerHTML=rows.map(b=>{
       const stake=Number(b.stake??b.amount??0);
       const odds=Number(b.total_odds??b.odds??1);
       const potential=Number(b.potential_return??b.potential_win??(stake*odds));
-      const status=String(b.status||b.bet_status||(isHistory?"Settled":"Open"));
       const ref=b.id||b.reference||b.bet_reference||"Bet";
-      return `<article class="selection"><div><strong>${escapeHtml(status.toUpperCase())} · ${escapeHtml(String(ref).slice(0,12))}</strong><div>Stake: ${escapeHtml(money(stake))}</div><div>Total odds: ${Number.isFinite(odds)?odds.toFixed(2):"—"}</div><div>Potential return: ${escapeHtml(money(potential))}</div><div class="muted">${escapeHtml(b.created_at?new Date(b.created_at).toLocaleString():"")}</div></div></article>`;
+      const betLegs=legs.filter(x=>String(x.bet_id)===String(b.id));
+      const legMarkets=betLegs.map(x=>marketById.get(String(x.market_id||x.marketId))).filter(Boolean);
+      const related=legMarkets.map(m=>matchById.get(String(m.match_id))).filter(Boolean);
+      const state=statusLabel(b,related);
+      const legHtml=betLegs.length?betLegs.map((leg,i)=>{
+        const m=marketById.get(String(leg.market_id||leg.marketId));
+        const match=m?matchById.get(String(m.match_id)):null;
+        const c=match?fixtureClock(match):null;
+        const sc=match&&c?fixtureScore(match,c.minute):null;
+        const home=match?.home_team||leg.home_team||"Match";
+        const away=match?.away_team||leg.away_team||"";
+        const score=c&&sc?(c.status==="scheduled"?"VS":`${sc.home} - ${sc.away}`):"";
+        const matchState=c?(c.status==="first_half"||c.status==="second_half"?`LIVE · ${c.minute}′`:c.status==="half_time"?"HALF-TIME":c.status==="full_time"?"FULL TIME":"MATCH NOT STARTED"):"MATCH DETAILS";
+        const pick=(m?.selection_name||leg.selection_name||leg.selection||"Selection");
+        const marketName=(m?.market_name||leg.market_name||"Market");
+        const legOdds=Number(m?.odds??leg.odds??1);
+        return `<div class="mybet-match"><div class="mybet-match-top"><span>${escapeHtml(home)}${away?" vs "+escapeHtml(away):""}</span><span class="mybet-score">${escapeHtml(score)}</span></div><div class="mybet-selection">${escapeHtml(match?.competition||"")} · ${escapeHtml(matchState)}</div><div class="mybet-market">${escapeHtml(marketName)}: ${escapeHtml(pick)}</div><div class="mybet-selection">Odds ${Number.isFinite(legOdds)?legOdds.toFixed(2):"—"}</div></div>`;
+      }).join(""):`<div class="mybet-match"><div class="mybet-selection">Match selections are saved, but detailed market records are not available to this account yet.</div></div>`;
+      return `<article class="mybet-card"><div class="mybet-card-head"><span class="mybet-state ${state.cls}">${escapeHtml(state.label)}</span><strong>Ticket · ${escapeHtml(String(ref).slice(0,12))}</strong></div>${legHtml}<div class="mybet-meta"><div><small>STAKE</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>TOTAL ODDS</small><strong>${Number.isFinite(odds)?odds.toFixed(2):"—"}</strong></div><div><small>PLACED</small><strong>${escapeHtml(b.created_at?new Date(b.created_at).toLocaleDateString():"—")}</strong></div></div><div class="mybet-return"><span>Potential return</span><span>${escapeHtml(money(potential))}</span></div></article>`;
     }).join("");
   }catch(err){
     list.classList.remove("hidden");
