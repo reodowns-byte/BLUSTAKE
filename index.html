@@ -298,9 +298,13 @@ body{background:#f3f7fb;color:#142b3d}
 #continueToGateway{min-height:66px}
 @media(max-width:380px){.payment-details-page{padding-left:14px;padding-right:14px}.momo-providers{gap:5px}.momo-providers button{font-size:10px}.momo-number-field{gap:8px;padding:0 12px}.momo-number-field strong{font-size:18px}.payment-total-row{padding:14px}}
 
-</style>
+
+/* Hero image carousel belongs to the Home page only; never show it on wallet, deposit, withdrawal, profile, history, or admin screens. */
+.hero-carousel{display:none!important}
+body.show-home-hero .hero-carousel{display:block!important}
+\n</style>
 </head>
-<body>
+<body class="show-home-hero">
 <header class="header">
   <div class="wrap header-inner">
     <div class="brand">BLU<span>STAKE</span></div>
@@ -607,6 +611,7 @@ function hideAuth() { $("authModal").classList.remove("open"); }
 function setView(view) {
   document.querySelectorAll(".view").forEach(el => el.classList.add("hidden"));
   const target = $("view-" + view); if (target) target.classList.remove("hidden");
+  document.body.classList.toggle("show-home-hero", view === "sports");
   document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("active",b.dataset.view===view));
   const toolbar=$("sportsToolbar"); if(toolbar) toolbar.classList.toggle("hidden",view!=="sports");
   if (view === "wallet") refreshFundingStatus();
