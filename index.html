@@ -705,6 +705,8 @@ body.show-home-hero .hero-carousel{display:block!important}
       <div class="mybets-filters hidden" id="betHistoryFilters">
         <button type="button" class="active" data-history-filter="settled">Bet Status: Settled</button>
         <button type="button" data-history-filter="all">🏆 Result: All</button>
+        <button type="button" data-history-filter="won">Won</button>
+        <button type="button" data-history-filter="lost">Lost</button>
       </div>
       <div class="mybets-empty" id="openBetsEmpty">
         <div class="mybets-empty-icon">🎟</div>
@@ -921,6 +923,7 @@ document.querySelectorAll("[data-open-filter]").forEach(b=>b.addEventListener("c
 }));
 document.querySelectorAll("[data-history-filter]").forEach(b=>b.addEventListener("click",()=>{
   document.querySelectorAll("[data-history-filter]").forEach(x=>x.classList.toggle("active",x===b));
+  loadMyBets();
 }));
 
 async function loadMyBets(){
@@ -932,8 +935,8 @@ async function loadMyBets(){
     $("betHistoryEmpty").classList.remove("hidden");
     return;
   }
-  const isHistory=!$("betHistoryTab").classList.contains("active");
-  const empty=isHistory?$("betHistoryEmpty"):("openBetsEmpty");
+  const isHistory=$("betHistoryTab").classList.contains("active");
+  const empty=isHistory?$("betHistoryEmpty"):$("openBetsEmpty");
   list.classList.remove("hidden");
   list.innerHTML='<div class="notice">Loading your bets…</div>';
   empty.classList.add("hidden");
@@ -941,8 +944,17 @@ async function loadMyBets(){
     const {data,error}=await supabaseClient.from("bluestake_bets").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
     if(error)throw error;
     const allBets=data||[];
-    const terminal=s=>["settled","won","lost","void","cancelled","canceled"].some(x=>String(s||"").toLowerCase().includes(x));
-    const rows=allBets.filter(b=>isHistory?terminal(b.status||b.bet_status):!terminal(b.status||b.bet_status));
+    const normalizedStatus=b=>String(b.status||b.bet_status||"").trim().toLowerCase();
+    const terminal=s=>["settled","won","lost","void","cancelled","canceled"].some(x=>String(s||"").includes(x));
+    const historyFilter=document.querySelector("[data-history-filter].active")?.dataset.historyFilter||"settled";
+    const rows=allBets.filter(b=>{
+      const st=normalizedStatus(b);
+      if(!isHistory) return !terminal(st);
+      if(!terminal(st)) return false;
+      if(historyFilter==="won") return st.includes("won");
+      if(historyFilter==="lost") return st.includes("lost");
+      return true;
+    });
     if(!rows.length){list.classList.add("hidden");empty.classList.remove("hidden");return;}
     // Load the saved legs, then resolve each leg to its market and match.
     let legs=[],markets=[],matches=[];
@@ -965,7 +977,7 @@ async function loadMyBets(){
     const matchById=new Map(matches.map(x=>[String(x.id),x]));
     const statusLabel=(b,related)=>{
       const raw=String(b.status||b.bet_status||"").toLowerCase();
-      if(terminal(raw))return {label:raw.includes("won")?"WON":raw.includes("lost")?"LOST":raw.includes("void")?"VOID":"SETTLED",cls:"settled"};
+      if(terminal(raw))return {label:raw.includes("won")?"WON":raw.includes("lost")?"LOST":raw.includes("void")?"VOID":raw.includes("cancel")?"CANCELLED":"SETTLED",cls:"settled"};
       const clocks=related.map(m=>fixtureClock(m));
       if(clocks.some(c=>c.status==="first_half"||c.status==="second_half"))return {label:"● LIVE",cls:"live"};
       if(clocks.some(c=>c.status==="half_time"))return {label:"HALF-TIME",cls:"live"};
@@ -996,7 +1008,12 @@ async function loadMyBets(){
         const legOdds=Number(m?.odds??leg.odds??1);
         return `<div class="mybet-match"><div class="mybet-match-top"><span>${escapeHtml(home)}${away?" vs "+escapeHtml(away):""}</span><span class="mybet-score">${escapeHtml(score)}</span></div><div class="mybet-selection">${escapeHtml(match?.competition||"")} · ${escapeHtml(matchState)}</div><div class="mybet-market">${escapeHtml(marketName)}: ${escapeHtml(pick)}</div><div class="mybet-selection">Odds ${Number.isFinite(legOdds)?legOdds.toFixed(2):"—"}</div></div>`;
       }).join(""):`<div class="mybet-match"><div class="mybet-selection">Match selections are saved, but detailed market records are not available to this account yet.</div></div>`;
-      return `<article class="mybet-card"><div class="mybet-card-head"><span class="mybet-state ${state.cls}">${escapeHtml(state.label)}</span><strong>Ticket · ${escapeHtml(String(ref).slice(0,12))}</strong></div>${legHtml}<div class="mybet-meta"><div><small>STAKE</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>TOTAL ODDS</small><strong>${Number.isFinite(odds)?odds.toFixed(2):"—"}</strong></div><div><small>PLACED</small><strong>${escapeHtml(b.created_at?new Date(b.created_at).toLocaleDateString():"—")}</strong></div></div><div class="mybet-return"><span>Potential return</span><span>${escapeHtml(money(potential))}</span></div></article>`;
+      const isWon=String(b.status||b.bet_status||"").toLowerCase().includes("won");
+      const isLost=String(b.status||b.bet_status||"").toLowerCase().includes("lost");
+      const returned=Number(b.actual_return??b.return_amount??b.payout_amount??(isWon?potential:0));
+      const returnLabel=isHistory?"Total return":"Potential return";
+      const returnValue=isHistory?returned:potential;
+      return `<article class="mybet-card"><div class="mybet-card-head"><span class="mybet-state ${state.cls}">${escapeHtml(state.label)}</span><strong>${isHistory?(isWon?"Won bet":isLost?"Lost bet":"Completed bet"):"Singles / Multiple"} · ${escapeHtml(String(ref).slice(0,12))}</strong></div>${legHtml}<div class="mybet-meta"><div><small>STAKE</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>TOTAL ODDS</small><strong>${Number.isFinite(odds)?odds.toFixed(2):"—"}</strong></div><div><small>PLACED</small><strong>${escapeHtml(b.created_at?new Date(b.created_at).toLocaleDateString():"—")}</strong></div></div><div class="mybet-return"><span>${returnLabel}</span><span>${escapeHtml(money(returnValue))}</span></div></article>`;
     }).join("");
   }catch(err){
     list.classList.remove("hidden");
