@@ -384,6 +384,33 @@ body.show-home-hero .hero-carousel{display:block!important}
 @media(min-width:700px){.booking-slip-page{max-width:780px;margin:0 auto;border:1px solid #dce6ee}.booking-slip-empty{min-height:230px}}
 @media(max-width:390px){.booking-slip-header{padding:14px 12px}.booking-slip-header>strong{font-size:19px}.booking-slip-balance{padding:8px}.booking-slip-summary{padding:12px}.booking-stake-tools{gap:4px;padding:8px}.booking-stake-tools label{font-size:9px}.booking-keypad button{min-height:48px;font-size:15px}.booking-stake-row{padding-left:12px;padding-right:12px}}
 
+
+.booking-code-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+.booking-code-modal.hidden{display:none!important}
+.booking-code-backdrop{position:absolute;inset:0;background:rgba(8,25,42,.78);backdrop-filter:blur(3px)}
+.booking-code-card{position:relative;z-index:1;width:min(100%,560px);max-height:88vh;overflow:auto;border-radius:18px;background:#fff;box-shadow:0 22px 70px rgba(0,0,0,.32);color:#172d40}
+.booking-code-close{position:sticky;float:right;top:8px;margin:8px 8px -42px 0;width:36px;height:36px;border:1px solid rgba(255,255,255,.6);border-radius:50%;background:#fff;color:#075b91;font-size:28px;line-height:1;z-index:3}
+.booking-code-banner{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:18px 20px;background:linear-gradient(110deg,#07385d,#0878ad);color:#fff}
+.booking-code-banner strong{font-size:20px;letter-spacing:.4px}.booking-code-banner span{font-size:13px;opacity:.9}
+.booking-code-content{padding:22px 18px 18px}
+.booking-code-eyebrow{margin:0 0 5px;color:#2876a9;font-size:11px;font-weight:900;letter-spacing:1.4px}
+.booking-code-content h2{margin:0 0 10px;font-size:22px}
+.booking-code-value{font-size:clamp(30px,8vw,42px);font-weight:900;letter-spacing:2px;text-align:center;color:#0879b5;background:#edf7fc;border:1px solid #c8e4f3;border-radius:12px;padding:12px;margin:10px 0}
+.booking-code-disclaimer{font-size:12px;line-height:1.5;color:#687d8e;text-align:center;margin:8px 0 16px}
+.booking-code-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 18px}
+.booking-code-summary>div{background:#eef5fa;border-radius:10px;padding:12px 10px;min-width:0}
+.booking-code-summary span{display:block;color:#61768a;font-size:12px;margin-bottom:5px}
+.booking-code-summary strong{display:block;color:#153c5a;font-size:15px;overflow-wrap:anywhere}
+.booking-code-selections-title{background:#dceef8;color:#14577f;padding:9px 12px;border-radius:8px 8px 0 0;font-weight:800}
+.booking-code-selections{border:1px solid #dce6ee;border-radius:0 0 8px 8px}
+.booking-code-selection{display:flex;justify-content:space-between;gap:12px;padding:12px;border-bottom:1px solid #e5edf3}
+.booking-code-selection:last-child{border-bottom:0}
+.booking-code-selection-main{min-width:0}.booking-code-selection-main strong{display:block;margin-bottom:4px}
+.booking-code-selection-main span{display:block;font-size:13px;color:#64788b;overflow-wrap:anywhere}
+.booking-code-selection-odds{white-space:nowrap;font-weight:900;color:#075b91}
+.booking-code-primary{width:100%;margin-top:16px;padding:14px;border:0;border-radius:10px;background:#075b91;color:#fff;font-weight:800;font-size:16px}
+@media(max-width:380px){.booking-code-content{padding:18px 12px 14px}.booking-code-summary{gap:5px}.booking-code-summary>div{padding:9px 6px}.booking-code-summary strong{font-size:13px}}
+
 </style>
 </head>
 <body class="show-home-hero">
@@ -991,9 +1018,38 @@ document.getElementById("bookingMultipleTab")?.addEventListener("click",()=>{
 document.getElementById("bookingSystemTab")?.addEventListener("click",()=>{
   document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingSystemTab"));
 });
-document.getElementById("bookBetButton")?.addEventListener("click",()=>{
-  setStatus("bookingBetStatus","Booking a bet is not connected to a booking-code service yet. No bet has been placed.","error");
-});
+function openBookingCodePreview(){
+  if(!selectedMarkets.length){
+    setStatus("bookingBetStatus","Choose at least one match odds selection before creating a booking slip.","error");
+    return;
+  }
+  const modal=$("bookingCodeModal");
+  const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
+  const stake=Number($("stakeInput")?.value||0);
+  const code="BLU-"+Array.from({length:6},()=> "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
+  $("generatedBookingCode").textContent=code;
+  $("previewTotalOdds").textContent=odds.toFixed(2);
+  $("previewStake").textContent=money(stake);
+  $("previewPotentialReturn").textContent=money(stake*odds);
+  $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`
+    <div class="booking-code-selection">
+      <div class="booking-code-selection-main">
+        <strong>⚽ ${escapeHtml(m.market||"Selection")}</strong>
+        <span>${escapeHtml(m.match)}</span>
+      </div>
+      <div class="booking-code-selection-odds">${Number(m.odds).toFixed(2)}</div>
+    </div>`).join("");
+  modal?.classList.remove("hidden");
+  document.body.style.overflow="hidden";
+}
+function closeBookingCodePreview(){
+  $("bookingCodeModal")?.classList.add("hidden");
+  document.body.style.overflow="";
+}
+document.getElementById("bookBetButton")?.addEventListener("click",openBookingCodePreview);
+document.querySelectorAll("[data-close-booking-code]").forEach(el=>el.addEventListener("click",closeBookingCodePreview));
+document.getElementById("closeBookingCodePreview")?.addEventListener("click",closeBookingCodePreview);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeBookingCodePreview();});
 renderBookingCode();
 
 $("authButton").addEventListener("click",()=>currentUser ? signOut() : (setAuthMode("login"),showAuth()));
@@ -1168,5 +1224,31 @@ $("refreshMatches").addEventListener("click",()=>{ $("matches").innerHTML='<div 
   } catch(err){setStatus("walletStatus","Supabase setup error: "+(err.message||"unknown error"),"error");}
 })();
 </script>
+
+  <div id="bookingCodeModal" class="booking-code-modal hidden" role="dialog" aria-modal="true" aria-labelledby="bookingCodeModalTitle">
+    <div class="booking-code-backdrop" data-close-booking-code></div>
+    <div class="booking-code-card">
+      <button type="button" class="booking-code-close" aria-label="Close booking code" data-close-booking-code>×</button>
+      <div class="booking-code-banner">
+        <strong>ⓑ BLUSTAKE</strong>
+        <span>Booking slip</span>
+      </div>
+      <div class="booking-code-content">
+        <p class="booking-code-eyebrow">BLUSTAKE BOOKING CODE</p>
+        <h2 id="bookingCodeModalTitle">Your selections</h2>
+        <div class="booking-code-value" id="generatedBookingCode">BLU----</div>
+        <p class="booking-code-disclaimer">Preview code only — it is not redeemable at a bookmaker until a booking-code service is integrated.</p>
+        <div class="booking-code-summary">
+          <div><span>Total odds</span><strong id="previewTotalOdds">1.00</strong></div>
+          <div><span>Stake</span><strong id="previewStake">GH₵0.00</strong></div>
+          <div><span>Potential return</span><strong id="previewPotentialReturn">GH₵0.00</strong></div>
+        </div>
+        <div class="booking-code-selections-title">Selected matches</div>
+        <div id="bookingCodeSelections" class="booking-code-selections"></div>
+        <button type="button" id="closeBookingCodePreview" class="booking-code-primary">Back to Booking Code</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
