@@ -799,7 +799,7 @@ function setView(view) {
   document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("active",b.dataset.view===view));
   const toolbar=$("sportsToolbar"); if(toolbar) toolbar.classList.toggle("hidden",view!=="sports");
   if (view === "wallet") refreshFundingStatus();
-  if (view === "bets") updateMyBetsBalance();
+  if (view === "bets") { updateMyBetsBalance(); loadMyBets(); }
   if (view === "booking-code") { const b=$("walletBalance")?.textContent; if($("bookingWalletBalance")) $("bookingWalletBalance").textContent=(b && b!=="Checking…")?b:"GH₵ —"; renderBookingCode(); }
   if (view === "history") loadRequests();
   document.querySelectorAll(".bottom-nav [data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
@@ -1013,9 +1013,20 @@ bookingKeypad?.addEventListener("click",e=>{
 });
 document.getElementById("placeBet")?.addEventListener("click",async()=>{
  if(!currentUser){showAuth();setStatus('bookingBetStatus','Sign in before placing a bet.','error');return;}
+ if(!supabaseClient){setStatus('bookingBetStatus','Database connection is unavailable.','error');return;}
  const stake=Number($('stakeInput').value||0);
  if(!selectedMarkets.length||!Number.isFinite(stake)||stake<=0){setStatus('bookingBetStatus','Choose odds and enter a valid stake.','error');return;}
- setStatus('bookingBetStatus','The secure wallet-and-bet settlement RPC must be installed before this slip can debit a balance. No bet has been placed.','error');
+ if(selectedMarkets.some(m=>!m.marketId)){setStatus('bookingBetStatus','One or more selections are not connected to a database market. Please select the odds again.','error');return;}
+ const b=$('placeBet'); b.disabled=true;
+ try{
+   const {data,error}=await supabaseClient.rpc('bluestake_place_bet',{p_stake:Math.round(stake*100)/100,p_market_ids:selectedMarkets.map(m=>m.marketId)});
+   if(error)throw error;
+   selectedMarkets=[]; $('stakeInput').value='';
+   document.querySelectorAll('#matches .market.selected').forEach(x=>x.classList.remove('selected'));
+   renderBookingCode(); await refreshWalletBalance(); await loadMyBets();
+   setStatus('bookingBetStatus','Bet placed successfully. Reference: '+String(data).slice(0,8).toUpperCase(),'ok');
+ }catch(err){setStatus('bookingBetStatus',err.message||'Bet could not be placed. No successful bet was confirmed.','error');}
+ finally{b.disabled=false;renderBookingCode();}
 });
 document.getElementById("clearBookingSelections")?.addEventListener("click",()=>{
   selectedMarkets=[];
@@ -1168,6 +1179,44 @@ $('saveFixture')?.addEventListener('click',async()=>{
 document.querySelector('.brand')?.addEventListener('click',async()=>{if(!currentUser){showAuth();return;}try{const {data,error}=await supabaseClient.rpc('bluestake_is_admin');if(error)throw error;if(data){setView('admin');await loadAdminMatchList();}else setStatus('walletStatus','Admin access is restricted to approved admin accounts.','error');}catch(e){setStatus('walletStatus','Admin role could not be verified.','error');}});
 setInterval(()=>{if(supabaseClient){loadBluStakeMatches();}},15000);
 
+async function refreshWalletBalance(){
+ if(!supabaseClient||!currentUser){$('walletBalance').textContent='GH₵ —';updateMyBetsBalance();return null;}
+ try{
+  const {data,error}=await supabaseClient.from('bluestake_wallets').select('balance,currency').eq('user_id',currentUser.id).eq('currency','GHS').maybeSingle();
+  if(error)throw error;
+  if(!data){$('walletBalance').textContent='GH₵ 0.00';updateMyBetsBalance();return 0;}
+  $('walletBalance').textContent=money(data.balance);updateMyBetsBalance();
+  if($('bookingWalletBalance'))$('bookingWalletBalance').textContent=money(data.balance);
+  if($('paymentWalletBalance'))$('paymentWalletBalance').textContent=money(data.balance);
+  return Number(data.balance||0);
+ }catch(err){setStatus('walletStatus','Wallet balance could not be loaded: '+(err.message||'database error'),'error');return null;}
+}
+async function loadMyBets(){
+ const list=$('myBetsList'),openEmpty=$('openBetsEmpty'),historyEmpty=$('betHistoryEmpty');
+ if(!list||!supabaseClient||!currentUser){if(list)list.classList.add('hidden');return;}
+ try{
+  const {data:bets,error}=await supabaseClient.from('bluestake_bets').select('id,stake,potential_return,status,created_at,settled_at').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(100);
+  if(error)throw error;
+  const rows=bets||[];
+  const {data:selections,error:selErr}=rows.length?await supabaseClient.from('bluestake_bet_selections').select('bet_id,market_id,selection_name,odds_at_placement,result').in('bet_id',rows.map(x=>x.id)): {data:[],error:null};
+  if(selErr)throw selErr;
+  const marketIds=[...new Set((selections||[]).map(x=>x.market_id))];
+  const {data:markets,error:mErr}=marketIds.length?await supabaseClient.from('bluestake_markets').select('id,market_name,match_id').in('id',marketIds):{data:[],error:null};
+  if(mErr)throw mErr;
+  const matchIds=[...new Set((markets||[]).map(x=>x.match_id))];
+  const {data:matches,error:mtErr}=matchIds.length?await supabaseClient.from('bluestake_matches').select('id,home_team,away_team,match_status,score_home,score_away').in('id',matchIds):{data:[],error:null};
+  if(mtErr)throw mtErr;
+  const marketMap=new Map((markets||[]).map(x=>[x.id,x]));const matchMap=new Map((matches||[]).map(x=>[x.id,x]));
+  const open=rows.filter(x=>x.status==='pending');const settled=rows.filter(x=>x.status!=='pending');
+  const isHistory=$('betHistoryTab')?.classList.contains('active');const shown=isHistory?settled:open;
+  list.innerHTML=shown.map(b=>{const ss=(selections||[]).filter(x=>x.bet_id===b.id);return `<article class="mybets-ticket"><div class="section-head"><strong>${escapeHtml(String(b.status||'pending').toUpperCase())}</strong><small>${new Date(b.created_at).toLocaleString()}</small></div>${ss.map(x=>{const mk=marketMap.get(x.market_id),mt=mk?matchMap.get(mk.match_id):null;return `<div class="mybets-ticket-selection"><strong>${escapeHtml(mt?mt.home_team+' vs '+mt.away_team:(mk?.market_name||'Selection'))}</strong><span>${escapeHtml(mk?.market_name||'Market')} · ${escapeHtml(x.selection_name)} @ ${Number(x.odds_at_placement).toFixed(2)}</span>${mt&&mt.match_status==='live'?`<small>LIVE ${Number(mt.score_home||0)} - ${Number(mt.score_away||0)}</small>`:''}</div>`}).join('')}<div class="mybets-ticket-footer"><span>Stake <b>${money(b.stake)}</b></span><span>Potential return <b>${money(b.potential_return)}</b></span></div></article>`}).join('');
+  list.classList.toggle('hidden',shown.length===0);openEmpty?.classList.toggle('hidden',isHistory||open.length>0);historyEmpty?.classList.toggle('hidden',!isHistory||settled.length>0);
+  updateMyBetsBalance();
+ }catch(err){setStatus('myBetsInternalStatus','Could not load bets: '+(err.message||'database error'),'error');}
+}
+$('openBetsTab')?.addEventListener('click',()=>{showMyBetsTab('open');loadMyBets();});
+$('betHistoryTab')?.addEventListener('click',()=>{showMyBetsTab('history');loadMyBets();});
+
 async function refreshSession() {
   if(!supabaseClient)return;
   const {data,error}=await supabaseClient.auth.getUser();
@@ -1178,13 +1227,16 @@ async function refreshSession() {
   $("walletBalance").textContent="—";
   if(currentUser){
     try{const ar=await supabaseClient.rpc('bluestake_is_admin');isBluStakeAdmin=!ar.error&&ar.data===true;if(isBluStakeAdmin)$('adminNav').classList.remove('hidden');}catch(_){isBluStakeAdmin=false;}
+    await refreshWalletBalance();
     await refreshFundingStatus();
+    await loadMyBets();
   }
   await loadBluStakeMatches();
 }
 async function signOut() {
   if(supabaseClient) await supabaseClient.auth.signOut();
   currentUser=null;$("authButton").textContent="Sign in";
+  $("walletBalance").textContent="GH₵ —"; updateMyBetsBalance();
   $("adminNav").classList.add("hidden");setStatus("walletStatus","Signed out.");
   setView("sports");
 }
