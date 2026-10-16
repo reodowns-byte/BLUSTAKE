@@ -824,7 +824,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_HIs1DX9GGSfnGGX71KSLwg_YRDwPK34";
 let supabaseClient = null;
 let authMode = "login";
 let currentUser = null;
-let selectedMarkets = [];
+let selectedMarkets = []; window.selectedMarkets = selectedMarkets;
 
 const $ = (id) => document.getElementById(id);
 function setStatus(id, message, kind="") {
@@ -1384,31 +1384,36 @@ function renderFixtureCard(m,detail=false){const clock=fixtureClock(m);if(clock.
 async function loadFixtures(){if(!supabaseClient){$("matches").innerHTML='<div class="notice">Supabase is not configured.</div>';return;}$("matches").innerHTML='<div class="notice">Loading fixtures…</div>';try{if(currentUser){await supabaseClient.rpc("bluestake_sync_match_clocks");}const {data:matches,error}=await supabaseClient.from("bluestake_matches").select("id,home_team,away_team,competition,kickoff_at,match_status,source_type,is_published,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(100);if(error)throw error;const ids=(matches||[]).map(m=>m.id);let markets=[],events=[];if(ids.length){const mr=await supabaseClient.from("bluestake_markets").select("id,match_id,market_name,selection_name,odds,is_open").in("match_id",ids).eq("is_open",true);if(mr.error)throw mr.error;markets=mr.data||[];const er=await supabaseClient.from("bluestake_match_goal_events").select("id,match_id,goal_minute,team_side").in("match_id",ids).order("goal_minute");if(!er.error)events=er.data||[];}fixtureCache=(matches||[]).map(m=>({...m,markets:markets.filter(x=>x.match_id===m.id),events:events.filter(x=>x.match_id===m.id).map(x=>({minute:x.goal_minute,team:x.team_side})),_marketsOpen:false}));const visible=fixtureCache.filter(m=>fixtureClock(m).status!=="full_time").sort((a,b)=>{const aa=a.source_type==="admin_simulated"?0:1,bb=b.source_type==="admin_simulated"?0:1;return aa-bb||new Date(b.created_at)-new Date(a.created_at);});$("matches").innerHTML=visible.length?visible.map(renderFixtureCard).join(""):'<div class="notice">No active fixtures are available. Matches appear here after an admin creates and publishes them or an authorized fixtures feed is connected.</div>';if($("adminMatchList"))$("adminMatchList").innerHTML=fixtureCache.length?fixtureCache.map(m=>`<div class="selection"><div><strong>${escapeHtml(m.home_team)} vs ${escapeHtml(m.away_team)}</strong><div class="muted">${escapeHtml(m.match_status||fixtureClock(m).status)} · ${new Date(m.kickoff_at).toLocaleString()}</div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="pill">${fixtureClock(m).label}</span><button type="button" class="btn secondary" data-edit-fixture="${escapeHtml(m.id)}">Edit</button><button type="button" class="btn secondary" data-delete-fixture="${escapeHtml(m.id)}">Delete</button></div></div>`).join(""):'No fixtures created yet.';}catch(err){$("matches").innerHTML=`<div class="notice">Could not load matches: ${escapeHtml(err.message||"database error")}. Apply the BLUSTAKE match migration in Supabase and check table permissions.</div>`;if($("adminMatchList"))$("adminMatchList").textContent=err.message||"Could not load matches.";}}
 function openMatchDetails(matchId){const match=fixtureCache.find(x=>x.id===matchId);if(!match)return;$("matchDetailsContent").innerHTML=renderFixtureCard(match,true);$("matchDetailsModal").classList.add("open");document.body.style.overflow="hidden";}
 function closeMatchDetails(){$("matchDetailsModal").classList.remove("open");document.body.style.overflow="";}
-$("closeMatchDetails")?.addEventListener("click",closeMatchDetails);
+document.addEventListener("click",e=>{if(e.target.closest("#closeMatchDetails")){e.preventDefault();closeMatchDetails();}});
 $("matchDetailsModal")?.addEventListener("click",e=>{if(e.target.id==="matchDetailsModal")closeMatchDetails();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMatchDetails();});
-// One delegated handler handles market taps in both the match list and the dynamically-rendered details modal.
+// One robust delegated market handler for dynamically-rendered cards and modal markets.
 document.addEventListener("click",function(e){
-  const button=e.target.closest("button.market[data-fixture-market]");
+  const button=e.target.closest(".market[data-fixture-market]");
   if(!button || button.disabled) return;
-  const match=fixtureCache.find(m=>String(m.id)===String(button.dataset.fixtureMarket));
-  if(!match) return;
-  const odds=Number(button.dataset.odds);
-  if(!Number.isFinite(odds)||odds<=1) return;
+  const fixtureId=String(button.getAttribute("data-fixture-market")||"");
+  const match=fixtureCache.find(m=>String(m.id)===fixtureId);
+  const odds=Number(button.getAttribute("data-odds"));
+  if(!match || !Number.isFinite(odds) || odds<=1) return;
   e.preventDefault();
   e.stopPropagation();
-  const market=button.dataset.market||"Selection";
-  const index=selectedMarkets.findIndex(x=>String(x.fixtureId)===String(match.id)&&x.market===market);
-  if(index>=0){selectedMarkets.splice(index,1);button.classList.remove("selected");}
-  else {selectedMarkets.push({match:match.home_team+" vs "+match.away_team,market,odds,fixtureId:match.id});button.classList.add("selected");}
-  // Keep duplicate buttons for the same selection in sync wherever rendered.
-  document.querySelectorAll("button.market[data-fixture-market]").forEach(b=>{
-    if(String(b.dataset.fixtureMarket)===String(match.id)&&b.dataset.market===market){b.classList.toggle("selected",index<0);}
+  const market=button.getAttribute("data-market")||"Selection";
+  const index=selectedMarkets.findIndex(x=>String(x.fixtureId)===fixtureId && x.market===market);
+  if(index>=0) selectedMarkets.splice(index,1);
+  else selectedMarkets.push({match:match.home_team+" vs "+match.away_team,market,odds,fixtureId:match.id});
+  document.querySelectorAll(".market[data-fixture-market]").forEach(b=>{
+    if(String(b.getAttribute("data-fixture-market"))===fixtureId && b.getAttribute("data-market")===market){
+      b.classList.toggle("selected",index<0);
+      b.setAttribute("aria-pressed",String(index<0));
+    }
   });
-  renderBookingCode();
+  if(typeof renderBookingCode==="function") renderBookingCode();
   const badge=$("slipCount"); if(badge) badge.textContent=String(selectedMarkets.length);
-  const summary=$("bookingSelectionCount"); if(summary) summary.textContent=String(selectedMarkets.length);
-  const status=$("marketSelectionStatus"); if(status){status.textContent=selectedMarkets.length+" selection(s) in your booking slip.";status.className="status ok";}
+  const count=$("bookingSelectionCount"); if(count) count.textContent=String(selectedMarkets.length);
+  const status=$("marketSelectionStatus");
+  if(status){status.textContent=selectedMarkets.length+" selection(s) in your booking slip.";status.className="status ok";}
+  const fab=document.getElementById("blustakeFloatingSlip");
+  if(fab){fab.hidden=selectedMarkets.length===0;const n=fab.querySelector("[data-slip-count]");if(n)n.textContent=String(selectedMarkets.length);}
 },true);
 $("matches")?.addEventListener("click",e=>{if(e.target.closest("button,a,input,select,textarea,[data-fixture-market]"))return;const card=e.target.closest(".match[data-fixture-id]");if(card){openMatchDetails(card.dataset.fixtureId);}});
 function handleFixtureMarketClick(e){const button=e.target.closest(".market[data-fixture-market]");if(!button||button.disabled)return;const match=fixtureCache.find(m=>m.id===button.dataset.fixtureMarket);if(!match)return;const odds=Number(button.dataset.odds);if(!Number.isFinite(odds)||odds<=1)return;const matchLabel=match.home_team+" vs "+match.away_team;const market=button.dataset.market||"Selection";const existing=selectedMarkets.findIndex(x=>x.fixtureId===match.id&&x.market===market);if(existing>=0){selectedMarkets.splice(existing,1);button.classList.remove("selected");}else{selectedMarkets.push({match:matchLabel,market,odds,fixtureId:match.id});button.classList.add("selected");}renderBookingCode();const slipBadge=$("slipCount");if(slipBadge)slipBadge.textContent=String(selectedMarkets.length);const summary=$("bookingSelectionCount");if(summary)summary.textContent=String(selectedMarkets.length);setStatus("marketSelectionStatus",selectedMarkets.length+" selection(s) added to your booking slip. You can choose more markets or open Booking Code to stake.","success");}
@@ -1488,6 +1493,14 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
   </div>
 
 
+  <style>
+    #blustakeFloatingSlip{position:fixed;right:18px;bottom:112px;z-index:9998;width:66px;height:66px;border:3px solid #fff;border-radius:50%;background:#f2c94c;color:#082b48;box-shadow:0 5px 18px #001c334d;display:flex;align-items:center;justify-content:center;font-size:25px;font-weight:800;touch-action:none;cursor:grab}
+    #blustakeFloatingSlip[hidden]{display:none!important}
+    #blustakeFloatingSlip [data-slip-count]{position:absolute;right:-3px;top:-5px;min-width:24px;height:24px;border-radius:20px;background:#d92e2e;color:#fff;border:2px solid white;font-size:13px;display:flex;align-items:center;justify-content:center}
+    button.market.selected{background:#0b6398!important;border-color:#f0bd35!important;color:#fff!important;box-shadow:0 0 0 2px #f0bd35 inset}
+  </style>
+  <button id="blustakeFloatingSlip" type="button" aria-label="Open booking slip" title="Open booking slip" hidden>▤<span data-slip-count>0</span></button>
+
   <div id="matchDetailsModal" class="match-details-backdrop" role="dialog" aria-modal="true" aria-label="Match details">
     <div class="match-details-panel">
       <div class="match-details-header"><strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div>
@@ -1562,6 +1575,20 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
     if(!close) return;
     document.querySelectorAll('.tracker-panel').forEach(stop);
   });
+  // Floating, draggable booking-slip shortcut.
+  const fab=document.getElementById('blustakeFloatingSlip');
+  if(fab){
+    const refreshFab=()=>{fab.hidden=!(window.selectedMarkets&&window.selectedMarkets.length);const n=fab.querySelector('[data-slip-count]');if(n)n.textContent=String(window.selectedMarkets?window.selectedMarkets.length:0);};
+    document.addEventListener('click',e=>{if(e.target.closest('#blustakeFloatingSlip')){e.preventDefault();const nav=document.getElementById('bottomBookingCode');if(nav)nav.click();else{const view=document.getElementById('view-booking-code');if(view){document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden'));view.classList.remove('hidden');}}}});
+    let dragging=false, moved=false, sx=0, sy=0, left=0, top=0;
+    fab.addEventListener('pointerdown',e=>{dragging=true;moved=false;sx=e.clientX;sy=e.clientY;const r=fab.getBoundingClientRect();left=r.left;top=r.top;fab.setPointerCapture(e.pointerId);});
+    fab.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.abs(dx)+Math.abs(dy)>5)moved=true;if(moved){fab.style.left=Math.max(4,Math.min(window.innerWidth-fab.offsetWidth-4,left+dx))+'px';fab.style.top=Math.max(4,Math.min(window.innerHeight-fab.offsetHeight-4,top+dy))+'px';fab.style.right='auto';fab.style.bottom='auto';}});
+    fab.addEventListener('pointerup',()=>{dragging=false;if(moved){const suppress=ev=>{ev.stopImmediatePropagation();ev.preventDefault();fab.removeEventListener('click',suppress,true);};fab.addEventListener('click',suppress,true);}});
+    window.addEventListener('resize',()=>{if(fab.style.left){fab.style.left=Math.max(4,Math.min(window.innerWidth-fab.offsetWidth-4,parseFloat(fab.style.left)||4))+'px';fab.style.top=Math.max(4,Math.min(window.innerHeight-fab.offsetHeight-4,parseFloat(fab.style.top)||4))+'px';}});
+    // Keep the badge synchronized with market taps.
+    document.addEventListener('click',()=>setTimeout(refreshFab,0),true);
+    refreshFab();
+  }
 })();
 </script>
 </body>
