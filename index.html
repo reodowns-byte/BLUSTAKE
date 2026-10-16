@@ -138,6 +138,75 @@ main.wrap{max-width:780px;padding:0 14px}
 body{padding-bottom:100px}
 @media(max-width:460px){.hero-carousel{margin:12px 0 16px}.hero-slide img{height:clamp(300px,61vw,430px)}.hero-slide-label{left:4.5%;right:34%;bottom:16%;gap:7px}.hero-slide-label strong{font-size:clamp(24px,6.2vw,34px)}.bottom-nav{padding-bottom:calc(8px + env(safe-area-inset-bottom))}}
 
+
+/* BLUSTAKE original layout — blue and white color theme only */
+:root{
+  --navy:#06345a;
+  --blue:#075b91;
+  --blue2:#0d77b8;
+  --cyan:#62d5f2;
+  --bg:#f3f7fb;
+  --card:#ffffff;
+  --ink:#142b3d;
+  --muted:#718497;
+  --line:#dce6ee;
+  --green:#138b58;
+  --red:#c83e4d;
+  --gold:#ffffff;
+}
+body{background:#f3f7fb;color:#142b3d}
+.header{background:linear-gradient(120deg,#062d4a,#075b91);color:#fff}
+.brand:before{background:#fff!important;color:#075b91!important}
+.brand span{color:#fff!important}
+.nav button.active{background:#fff;color:#06345a}
+.nav button,.head-action{background:#ffffff15;color:#fff;border-color:#ffffff55}
+#registerButton{background:#fff!important;color:#075b91!important;border-color:#fff!important}
+.hero-carousel{background:#06345a}
+.hero-shade{background:linear-gradient(90deg,#031b31d9 0%,#031b3180 55%,#031b3110 100%)}
+.hero-slide-label small{color:#8be5ff!important}
+.hero-slide-label strong{color:#fff!important}
+.hero-slide-label span{color:#e4f2fb!important}
+.hero-slide-label em{background:#fff!important;color:#075b91!important}
+.hero-dots button.active{background:#fff!important}
+.quick-categories{background:#eef5fa}
+.quick-category .cat-icon{background:#fff!important;border-color:#cbdde9!important;color:#075b91!important}
+.quick-category.active .cat-icon{background:#075b91!important;border-color:#075b91!important;color:#fff!important}
+.quick-category.active{color:#075b91!important}
+.sport-tabs{background:#eef5fa}
+.sport-tabs button.active{color:#075b91!important;border-bottom-color:#075b91!important}
+.market-tabs{background:#075b91!important;color:#fff!important}
+.market-tabs button{color:#fff!important}
+.market-tabs button.active{color:#fff!important}
+.date-filters{border-color:#075b91!important}
+.date-filters button{background:#fff!important;color:#075b91!important}
+.date-filters button.active{background:#075b91!important;color:#fff!important}
+.live-banner{background:linear-gradient(90deg,#075b91,#06345a)!important;border-color:#075b91!important;color:#fff}
+.events-count,.events-head .live-dot{color:#075b91}
+.events-head .live-dot{background:#62c9e9!important}
+.league{background:#075b91!important;color:#fff!important}
+.match{border-color:#dce6ee!important;background:#fff}
+.market{background:#f0f8fc!important;border-color:#cfe4ef!important;color:#075b91!important}
+.market.selected{background:#075b91!important;border-color:#075b91!important;color:#fff!important}
+.btn{background:#075b91!important;color:#fff!important}
+.btn:hover{background:#0d77b8!important}
+.btn.secondary{background:#e9f3f8!important;color:#075b91!important}
+.field:focus{border-color:#0d77b8!important;box-shadow:0 0 0 3px #0d77b81a!important}
+.bottom-nav{background:#fff!important;border-top:1px solid #dce6ee!important;box-shadow:0 -4px 18px #1720330d!important}
+.bottom-nav button{color:#718497!important}
+.bottom-nav button.active,.bottom-nav button.active .nav-icon{color:#075b91!important}
+.bottom-nav .booking-code-nav{background:#075b91!important;color:#fff!important;border-color:#fff!important;box-shadow:0 0 0 2px #075b91,0 4px 18px #075b9130!important}
+.bottom-nav .booking-code-nav .nav-icon{color:#fff!important}
+.bottom-nav .booking-code-nav span:last-child{color:#718497!important}
+.tabs button.active{background:#075b91!important;color:#fff!important}
+.pill.active{background:#e6f6fc!important;color:#075b91!important;border-color:#9ddced!important}
+
+
+/* Booking Code destination: selections live here, not beside the fixture list. */
+.booking-code-panel{max-width:760px;margin:18px auto;background:#fff;border-color:#dce6ee;border-radius:18px}
+#view-booking-code .slip-empty{padding:24px 16px;background:#f3f7fb;border:1px dashed #cbd9e5;color:#718497;text-align:center}
+#view-booking-code .selection{align-items:center;gap:12px}
+#view-booking-code .selection button{padding:8px 10px;border-radius:8px;background:#e9f3f8;color:#075b91}
+
 </style>
 </head>
 <body>
@@ -210,14 +279,22 @@ body{padding-bottom:100px}
           <div class="notice">No verified live fixtures are connected yet. Connect an authorized fixtures feed or clearly labeled admin-created fixtures to display matches here.</div>
         </div>
       </div>
-      <aside class="section">
-        <div class="section-head"><h2>Bet slip</h2><span id="slipCount" class="pill">0 selections</span></div>
-        <div id="slipItems" class="slip-empty">Choose a market from a connected fixture feed to add a selection.</div>
-        <label for="stakeInput">Stake (GH₵)</label><input id="stakeInput" class="field" type="number" min="0.01" step="0.01" placeholder="Enter stake" disabled>
-        <div class="stats" style="margin-top:12px"><div class="stat"><small>Potential return</small><strong id="potentialReturn">GH₵0.00</strong></div><div class="stat"><small>Selections</small><strong id="selectionStat">0</strong></div></div>
-        <button class="btn full" id="placeBet" disabled>Place bet</button>
-        <p class="muted">Bet placement remains disabled until an authorized odds feed and secure server-side bet settlement are configured.</p>
-      </aside>
+
+    </div>
+  </section>
+
+  <section id="view-booking-code" class="view hidden">
+    <div class="section booking-code-panel">
+      <div class="section-head"><h2>Booking Code</h2><span id="slipCount" class="pill">0 selections</span></div>
+      <div id="slipItems" class="slip-empty">Your selected matches and odds will appear here. Choose odds from a match to add a selection.</div>
+      <label for="stakeInput">Stake (GH₵)</label>
+      <input id="stakeInput" class="field" type="number" min="0.01" step="0.01" placeholder="Enter stake" disabled>
+      <div class="stats" style="margin-top:12px">
+        <div class="stat"><small>Potential return</small><strong id="potentialReturn">GH₵0.00</strong></div>
+        <div class="stat"><small>Selections</small><strong id="selectionStat">0</strong></div>
+      </div>
+      <button class="btn full" id="placeBet" disabled>Place bet</button>
+      <p class="muted">Bet placement remains disabled until an authorized odds feed and secure server-side bet settlement are configured.</p>
     </div>
   </section>
 
@@ -373,12 +450,9 @@ document.getElementById("bottomLive")?.addEventListener("click",()=>{
   setTimeout(()=>document.querySelector(".live-banner")?.scrollIntoView({behavior:"smooth",block:"start"}),40);
 });
 document.getElementById("bottomBookingCode")?.addEventListener("click",()=>{
+  setView("booking-code");
   document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.id==="bottomBookingCode"));
-  setView("sports");
-  setTimeout(()=>{
-    const slip=document.querySelector("#view-sports aside");
-    if(slip) slip.scrollIntoView({behavior:"smooth",block:"start"});
-  },60);
+  window.scrollTo({top:0,behavior:"smooth"});
 });
 document.getElementById("bottomProfile")?.addEventListener("click",()=>{
   if(!currentUser){showAuth();return;}
@@ -400,6 +474,48 @@ document.getElementById("fixtureSearch")?.addEventListener("input",e=>{
   const q=e.target.value.trim().toLowerCase();
   document.querySelectorAll("#matches .match").forEach(m=>m.classList.toggle("hidden",q&&!m.textContent.toLowerCase().includes(q)));
 });
+
+function renderBookingCode(){
+  const items=$("slipItems");
+  if(!items)return;
+  $("slipCount").textContent=selectedMarkets.length+" selection"+(selectedMarkets.length===1?"":"s");
+  $("selectionStat").textContent=String(selectedMarkets.length);
+  if(!selectedMarkets.length){
+    items.className="slip-empty";
+    items.textContent="Your selected matches and odds will appear here. Choose odds from a match to add a selection.";
+  }else{
+    items.className="";
+    items.innerHTML=selectedMarkets.map((m,i)=>`<div class="selection"><div><strong>${escapeHtml(m.match)}</strong><div class="muted">${escapeHtml(m.market)} · Odds ${Number(m.odds).toFixed(2)}</div></div><button type="button" data-remove-selection="${i}" aria-label="Remove selection">Remove</button></div>`).join("");
+  }
+  const stake=Number($("stakeInput")?.value||0);
+  const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
+  $("potentialReturn").textContent=money(stake*odds);
+  $("placeBet").disabled=true;
+}
+document.getElementById("matches")?.addEventListener("click",e=>{
+  const button=e.target.closest(".market");
+  if(!button || button.disabled)return;
+  const card=button.closest(".match");
+  if(!card)return;
+  const odds=Number(button.dataset.odds || (button.textContent.match(/\d+(?:\.\d+)?/)||[])[0]);
+  if(!Number.isFinite(odds)||odds<=1)return;
+  const teams=card.querySelector(".teams");
+  const match=teams?teams.innerText.replace(/\n+/g," vs ").trim():"Selected match";
+  const market=(button.dataset.market || button.innerText.replace(/\s+/g," ").trim());
+  const existing=selectedMarkets.findIndex(m=>m.match===match);
+  if(existing>=0)selectedMarkets.splice(existing,1);
+  selectedMarkets.push({match,market,odds});
+  renderBookingCode();
+  button.classList.add("selected");
+});
+document.getElementById("slipItems")?.addEventListener("click",e=>{
+  const remove=e.target.closest("[data-remove-selection]");
+  if(!remove)return;
+  selectedMarkets.splice(Number(remove.dataset.removeSelection),1);
+  renderBookingCode();
+});
+$("stakeInput")?.addEventListener("input",renderBookingCode);
+renderBookingCode();
 
 $("authButton").addEventListener("click",()=>currentUser ? signOut() : (setAuthMode("login"),showAuth()));
 $("registerButton").addEventListener("click",()=>{setAuthMode("signup");showAuth();});
@@ -527,11 +643,7 @@ function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":
 $("refreshFundingStatus")?.addEventListener("click",refreshFundingStatus);
 $("refreshRequests").addEventListener("click",loadRequests);
 $("refreshMatches").addEventListener("click",()=>{ $("matches").innerHTML='<div class="notice">No authorized fixture feed is connected yet. Connect the server-side fixtures endpoint to show real matches.</div>'; });
-$("stakeInput").addEventListener("input",()=>{
-  const stake=Number($("stakeInput").value);
-  const odds=selectedMarkets.reduce((n,m)=>n*m.odds,1);
-  $("potentialReturn").textContent=money(stake*odds);
-});
+
 
 // Hero banner carousel: arrows, dots, and touch-swipe left/right.
 (function(){
