@@ -151,8 +151,20 @@
     <p class="muted">Create an account or sign in to continue.</p>
     <div class="tabs"><button class="active" id="loginTab">Sign in</button><button id="signupTab">Create account</button></div>
     <form id="authForm">
-      <label for="authEmail">Email address</label><input class="field" id="authEmail" type="email" autocomplete="email" required>
-      <label for="authPassword">Password</label><input class="field" id="authPassword" type="password" minlength="8" autocomplete="current-password" required>
+      <div id="signupFields" class="hidden">
+        <label for="authName">Full name / username</label>
+        <input class="field" id="authName" type="text" autocomplete="name" maxlength="100" placeholder="Enter your name or username">
+        <label for="authPhone">Phone number</label>
+        <input class="field" id="authPhone" type="tel" autocomplete="tel" inputmode="tel" maxlength="25" placeholder="e.g. 0241234567">
+      </div>
+      <label for="authEmail">Email address</label>
+      <input class="field" id="authEmail" type="email" autocomplete="email" required>
+      <label for="authPassword" id="passwordLabel">Password</label>
+      <input class="field" id="authPassword" type="password" minlength="8" autocomplete="current-password" required>
+      <div id="confirmPasswordWrap" class="hidden">
+        <label for="authConfirmPassword">Confirm password</label>
+        <input class="field" id="authConfirmPassword" type="password" minlength="8" autocomplete="new-password">
+      </div>
       <button class="btn full" id="authSubmit" type="submit">Sign in</button>
       <p id="authStatus" class="status" role="status" aria-live="polite"></p>
     </form>
@@ -170,8 +182,8 @@
   4. Never put a service_role key or AlphaPay secret in this browser file.
   5. Apply the SQL migration in Supabase SQL Editor.
 */
-const SUPABASE_URL = "https://afuodieepsobihiovhsh.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_HIs1DX9GGSfnGGX71KSLwg_YRDwPK34";
+const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
+const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY_HERE";
 let supabaseClient = null;
 let authMode = "login";
 let currentUser = null;
@@ -206,17 +218,31 @@ function setAuthMode(mode) {
   $("authTitle").textContent=mode==="login"?"Sign in to BLUSTAKE":"Create your BLUSTAKE account";
   $("authSubmit").textContent=mode==="login"?"Sign in":"Create account";
   $("authPassword").autocomplete=mode==="login"?"current-password":"new-password";
+  $("signupFields").classList.toggle("hidden",mode!=="signup");
+  $("confirmPasswordWrap").classList.toggle("hidden",mode!=="signup");
+  $("authName").required=mode==="signup";
+  $("authPhone").required=mode==="signup";
+  $("authConfirmPassword").required=mode==="signup";
+  $("authPassword").autocomplete=mode==="login"?"current-password":"new-password";
+  $("passwordLabel").textContent=mode==="login"?"Password":"Create password";
   setStatus("authStatus","");
 }
 $("authForm").addEventListener("submit",async e=>{
   e.preventDefault();
   if(!supabaseClient){setStatus("authStatus","Add your Supabase URL and publishable key in this file first.","error");return;}
   const email=$("authEmail").value.trim(),password=$("authPassword").value;
+  const name=$("authName").value.trim(),phone=$("authPhone").value.trim();
+  const confirmPassword=$("authConfirmPassword").value;
+  if(authMode==="signup") {
+    if(!name || !phone){setStatus("authStatus","Enter your name/username and phone number.","error");return;}
+    if(password!==confirmPassword){setStatus("authStatus","The passwords do not match.","error");return;}
+    if(password.length<8){setStatus("authStatus","Use a password with at least 8 characters.","error");return;}
+  }
   $("authSubmit").disabled=true;
   try {
     const result=authMode==="login"
       ? await supabaseClient.auth.signInWithPassword({email,password})
-      : await supabaseClient.auth.signUp({email,password});
+      : await supabaseClient.auth.signUp({email,password,options:{data:{display_name:name,phone}}});
     if(result.error) throw result.error;
     if(authMode==="signup" && !result.data.session) {
       setStatus("authStatus","Account created. Check your email to confirm your address.","ok");
