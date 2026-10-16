@@ -419,7 +419,7 @@ body.show-home-hero .hero-carousel{display:block!important}
 <body class="show-home-hero">
 <header class="header">
   <div class="wrap header-inner">
-    <div class="brand">BLU<span>STAKE</span></div>
+    <button type="button" class="brand" id="brandAdminTrigger" aria-label="BLUSTAKE home and authorized admin access" style="background:transparent;border:0;color:inherit;padding:0;text-align:left;cursor:pointer">BLU<span>STAKE</span></button>
     <nav class="nav" aria-label="Main navigation">
       <button class="active" data-view="sports">Sports</button>
       <button data-view="wallet">Wallet</button>
@@ -714,6 +714,17 @@ body.show-home-hero .hero-carousel{display:block!important}
   <section id="view-admin" class="view hidden">
     <div class="section">
       <h2>BLUSTAKE Admin</h2>
+      <p class="muted">Private administration for the authorized account only. Registration and transaction information is restricted to admin access.</p>
+      <div class="section" style="margin-top:14px">
+        <div class="section-head"><h3>Account & transaction overview</h3><button type="button" class="btn secondary" id="refreshAdminOverview">Refresh overview</button></div>
+        <div class="stats" id="adminOverviewStats"><div class="stat"><small>Registered accounts</small><strong>—</strong></div><div class="stat"><small>Deposit records</small><strong>—</strong></div><div class="stat"><small>Withdrawal requests</small><strong>—</strong></div><div class="stat"><small>Wallet ledger entries</small><strong>—</strong></div></div>
+        <p class="status" id="adminOverviewStatus" role="status">Admin data loads after your account is verified.</p>
+        <div class="divider"></div><h3>Registered accounts</h3><div id="adminUsersList" class="muted">Not loaded.</div>
+        <div class="divider"></div><h3>Recent deposits</h3><div id="adminDepositsList" class="muted">Not loaded.</div>
+        <div class="divider"></div><h3>Recent withdrawal requests</h3><div id="adminWithdrawalsList" class="muted">Not loaded.</div>
+        <div class="divider"></div><h3>Recent wallet ledger entries</h3><div id="adminLedgerList" class="muted">Not loaded.</div>
+      </div>
+      <div class="divider"></div>
       <p class="muted">Create and manage BLUSTAKE fixtures. Created fixtures use the same match-card layout as the main list. Admin-created match simulations should not be mistaken for independently verified real-world fixtures.</p>
       <div class="notice">Apply the supplied Supabase SQL migration before creating fixtures. Match clock, score events and markets are stored centrally so signed-in accounts see the same state.</div>
       <div class="admin-grid">
@@ -806,7 +817,12 @@ function money(n) {
 }
 function showAuth() { $("authModal").classList.add("open"); }
 function hideAuth() { $("authModal").classList.remove("open"); }
-function setView(view) {
+async function setView(view) {
+  if (view === "admin") {
+    const allowed = await isAuthorizedAdmin();
+    if (!allowed) { alert("Admin access is restricted to reodowns@gmail.com."); return; }
+    loadAdminOverview();
+  }
   document.querySelectorAll(".view").forEach(el => el.classList.add("hidden"));
   const target = $("view-" + view); if (target) target.classList.remove("hidden");
   document.body.classList.toggle("show-home-hero", view === "sports");
@@ -1118,6 +1134,64 @@ $("authForm").addEventListener("submit",async e=>{
   } catch(err) {setStatus("authStatus",err.message||"Authentication failed.","error");}
   finally {$("authSubmit").disabled=false;}
 });
+const AUTHORIZED_ADMIN_EMAIL = "reodowns@gmail.com";
+let isAdminRoleVerified = false;
+async function isAuthorizedAdmin() {
+  if (!supabaseClient || !currentUser || String(currentUser.email||"").toLowerCase() !== AUTHORIZED_ADMIN_EMAIL) return false;
+  try {
+    const {data,error}=await supabaseClient.rpc("bluestake_is_admin");
+    isAdminRoleVerified=!error && data===true;
+    return isAdminRoleVerified;
+  } catch (_) { isAdminRoleVerified=false; return false; }
+}
+function adminRows(targetId, rows, fields, emptyText) {
+  const target=$(targetId); if(!target)return;
+  if(!rows || !rows.length){target.innerHTML=`<p class="muted">${escapeHtml(emptyText)}</p>`;return;}
+  target.innerHTML=rows.map(row=>{
+    const primary=fields.map(f=>row[f]).find(v=>v!==undefined && v!==null && String(v)!=="");
+    const detail=Object.entries(row).filter(([k,v])=>v!==null && v!==undefined && !["id","user_id","created_at"].includes(k)).slice(0,4).map(([k,v])=>`${escapeHtml(k.replaceAll("_"," "))}: ${escapeHtml(typeof v==="object"?JSON.stringify(v):String(v))}`).join(" · ");
+    return `<div class="selection"><div><strong>${escapeHtml(primary===undefined?"Record":String(primary))}</strong><div class="muted">${escapeHtml(row.created_at?new Date(row.created_at).toLocaleString():row.id||"")}</div><div class="muted">${detail}</div></div></div>`;
+  }).join("");
+}
+async function loadAdminOverview() {
+  if(!(await isAuthorizedAdmin())) { setStatus("adminOverviewStatus","Admin access denied.","error"); return; }
+  setStatus("adminOverviewStatus","Loading account and transaction records…");
+  const queries=[
+    ["profiles","bluestake_profiles","*"],
+    ["deposits","bluestake_deposits","*"],
+    ["withdrawals","bluestake_withdrawal_requests","*"],
+    ["ledger","bluestake_wallet_ledger","*"]
+  ];
+  const results={};
+  try {
+    for(const [key,table,columns] of queries){
+      const q=await supabaseClient.from(table).select(columns).order("created_at",{ascending:false}).limit(50);
+      if(q.error) throw new Error(table+": "+q.error.message);
+      results[key]=q.data||[];
+    }
+    $("adminOverviewStats").innerHTML=[
+      ["Registered accounts",results.profiles.length],
+      ["Deposit records",results.deposits.length],
+      ["Withdrawal requests",results.withdrawals.length],
+      ["Wallet ledger entries",results.ledger.length]
+    ].map(([label,value])=>`<div class="stat"><small>${label} (latest 50)</small><strong>${value}</strong></div>`).join("");
+    adminRows("adminUsersList",results.profiles,["email","display_name","full_name","phone","user_id"],"No registered accounts found.");
+    adminRows("adminDepositsList",results.deposits,["status","amount","reference","provider","user_id"],"No deposit records found.");
+    adminRows("adminWithdrawalsList",results.withdrawals,["status","amount","user_id"],"No withdrawal requests found.");
+    adminRows("adminLedgerList",results.ledger,["entry_type","transaction_type","amount","user_id"],"No wallet ledger entries found.");
+    setStatus("adminOverviewStatus","Loaded latest records. Full registration history may require pagination.","ok");
+  } catch(err) {
+    setStatus("adminOverviewStatus","Could not load admin records: "+(err.message||"database error")+". Apply the admin-read SQL policies provided with this update.","error");
+  }
+}
+$("refreshAdminOverview")?.addEventListener("click",loadAdminOverview);
+$("brandAdminTrigger")?.addEventListener("click",async()=>{
+  if(!currentUser){setView("sports");return;}
+  if(String(currentUser.email||"").toLowerCase()!==AUTHORIZED_ADMIN_EMAIL){setView("sports");return;}
+  if(await isAuthorizedAdmin()) setView("admin");
+  else alert("This account does not have the authorized BLUSTAKE admin role.");
+});
+
 async function refreshSession() {
   if(!supabaseClient)return;
   const {data,error}=await supabaseClient.auth.getUser();
@@ -1127,7 +1201,7 @@ async function refreshSession() {
   $("walletBalance").textContent="—";
   if(currentUser) {
     await refreshFundingStatus();
-    try { const role=await supabaseClient.rpc("bluestake_is_admin"); if(!role.error && role.data===true) { $("adminNav").classList.remove("hidden"); } } catch(_) {}
+    try { const role=await supabaseClient.rpc("bluestake_is_admin"); if(String(currentUser.email||"").toLowerCase()===AUTHORIZED_ADMIN_EMAIL && !role.error && role.data===true) { $("adminNav").classList.remove("hidden"); } } catch(_) {}
   }
   await loadFixtures();
 }
