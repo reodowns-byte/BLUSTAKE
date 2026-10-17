@@ -1129,7 +1129,7 @@ async function loadMyBets(){
       const headClass=isHistory?(isWon?"won":isLost?"lost":"pending"):"pending";
       const returnClass=isHistory&&isLost?"lost":"";
       const displayState=isHistory?(isWon?"🏆 Won":isLost?"Lost":"Settled"):state.label;
-      return `<article class="mybet-card"><div class="mybet-card-head ${headClass}"><span class="mybet-state ${state.cls}">${escapeHtml(displayState)}</span><strong>${escapeHtml(ticketType)}</strong></div><div class="mybet-legs-wrap">${legHtml}</div><div class="mybet-meta"><div><small>Stake</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>${isHistory?"Total Return":"Pot. Win"}</small><strong class="${isHistory&&isLost?"amount-lost":isHistory&&isWon?"amount-won":""}">${escapeHtml(money(returnValue))}</strong></div></div>${isHistory?`<div class="mybet-return ${returnClass}"><span>Total Return</span><span class="amount">${escapeHtml(money(returnValue))}</span></div>`:""}<div class="mybet-reference">Bet reference: ${escapeHtml(shortRef)}</div></article>`;
+      return `<article class="mybet-card ${isHistory?"mybet-history-clickable":""}" ${isHistory?`data-ticket-ref="${escapeHtml(shortRef)}" data-ticket-status="${escapeHtml(isWon?"won":isLost?"lost":"settled")}"`:""}><div class="mybet-card-head ${headClass}"><span class="mybet-state ${state.cls}">${escapeHtml(displayState)}</span><strong>${escapeHtml(ticketType)}</strong></div><div class="mybet-legs-wrap">${legHtml}</div><div class="mybet-meta"><div><small>Stake</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>${isHistory?"Total Return":"Pot. Win"}</small><strong class="${isHistory&&isLost?"amount-lost":isHistory&&isWon?"amount-won":""}">${escapeHtml(money(returnValue))}</strong></div></div>${isHistory?`<div class="mybet-return ${returnClass}"><span>Total Return</span><span class="amount">${escapeHtml(money(returnValue))}</span></div>`:""}<div class="mybet-reference">Bet reference: ${escapeHtml(shortRef)}</div></article>`;
     }).join("");
   }catch(err){
     list.classList.remove("hidden");
@@ -1802,7 +1802,37 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
     #blustakeFloatingSlip[hidden]{display:none!important}
     #blustakeFloatingSlip [data-slip-count]{position:absolute;right:-3px;top:-5px;min-width:24px;height:24px;border-radius:20px;background:#d92e2e;color:#fff;border:2px solid white;font-size:13px;display:flex;align-items:center;justify-content:center}
     button.market.selected{background:#0b6398!important;border-color:#f0bd35!important;color:#fff!important;box-shadow:0 0 0 2px #f0bd35 inset}
-  </style>
+  
+/* BLUSTAKE ticket-details screen inspired by the supplied reference, using BLUSTAKE colors */
+.mybet-history-clickable{cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.mybet-history-clickable:active{transform:scale(.995)}
+.mybet-detail-overlay{position:fixed;inset:0;z-index:10000;background:#f4f7fb;overflow:auto;display:none;color:#182c40}
+.mybet-detail-overlay.open{display:block}
+.mybet-detail-top{position:sticky;top:0;z-index:2;background:#173b60;color:#fff;display:grid;grid-template-columns:76px 1fr 44px;align-items:center;gap:8px;padding:18px 14px;box-shadow:0 2px 8px #102d4a33}
+.mybet-detail-top button{border:0;background:transparent;color:#fff;font-size:16px;padding:6px;cursor:pointer}
+.mybet-detail-top h2{font-size:19px;margin:0;text-align:center}
+.mybet-detail-summary{background:#173b60;color:#fff;padding:16px 18px 20px;border-bottom:1px solid #2d5277}
+.mybet-detail-ref{font-size:13px;color:#c9d8e7;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.mybet-detail-kind{display:flex;justify-content:space-between;gap:12px;font-size:17px;margin-bottom:16px}
+.mybet-detail-kind strong{font-weight:800}
+.mybet-detail-total{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:16px;padding-bottom:14px;border-bottom:1px solid #47617b}
+.mybet-detail-total strong{font-size:25px;color:#4bd17a}
+.mybet-detail-total .lost-total{color:#b8c0cb}
+.mybet-detail-numbers{display:grid;grid-template-columns:1fr auto;gap:8px;padding-top:16px;color:#d0dbe6;font-size:14px}
+.mybet-detail-numbers strong{color:#fff;text-align:right}
+.mybet-detail-legs{background:#fff;padding:0 16px}
+.mybet-detail-leg{position:relative;padding:20px 0 22px 28px;border-bottom:1px solid #dce5ee}
+.mybet-detail-leg:before{content:'✓';position:absolute;left:0;top:24px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#159447;color:#fff;font-weight:900;font-size:13px}
+.mybet-detail-leg.failed:before{content:'×';background:#e14b57}
+.mybet-detail-match-meta{font-size:13px;color:#7b8798;margin-bottom:5px}
+.mybet-detail-teams{font-size:17px;font-weight:750;margin-bottom:7px}
+.mybet-detail-score{font-size:14px;color:#159447;font-weight:800;margin-bottom:12px}
+.mybet-detail-pick{padding:12px;background:#d9eee0;border-radius:4px;display:grid;grid-template-columns:75px 1fr;gap:7px;font-size:14px;margin-top:8px}
+.mybet-detail-leg.failed .mybet-detail-pick{background:#f0f2f5}
+.mybet-detail-pick span{color:#718497;text-align:right}.mybet-detail-pick strong{font-weight:700;overflow-wrap:anywhere}
+.mybet-detail-footer{background:#fff;margin-top:12px}.mybet-detail-row{padding:16px;border-bottom:8px solid #f1f4f7;display:flex;justify-content:space-between;gap:12px;align-items:center}.mybet-detail-row button{border:0;background:transparent;color:#159447;font-weight:800;font-size:15px}
+@media(max-width:460px){.mybet-detail-top{padding:15px 10px;grid-template-columns:64px 1fr 30px}.mybet-detail-top h2{font-size:17px}.mybet-detail-summary{padding:14px}.mybet-detail-legs{padding:0 12px}.mybet-detail-leg{padding-left:25px}.mybet-detail-total strong{font-size:22px}}
+</style>
   <button id="blustakeFloatingSlip" type="button" aria-label="Open booking slip" title="Open booking slip" hidden>▤<span data-slip-count>0</span></button>
 
   <div id="matchDetailsModal" class="match-details-backdrop" role="dialog" aria-modal="true" aria-label="Match details">
@@ -1893,6 +1923,45 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
     document.addEventListener('click',()=>setTimeout(refreshFab,0),true);
     refreshFab();
   }
+})();
+</script>
+
+<div id="myBetTicketDetail" class="mybet-detail-overlay" role="dialog" aria-modal="true" aria-labelledby="myBetTicketDetailTitle">
+  <div class="mybet-detail-top"><button type="button" id="myBetDetailBack">‹ Back</button><h2 id="myBetTicketDetailTitle">Ticket Details</h2><button type="button" id="myBetDetailClose" aria-label="Close ticket details">×</button></div>
+  <div id="myBetTicketDetailContent"></div>
+</div>
+<script>
+(function(){
+ const overlay=document.getElementById('myBetTicketDetail');
+ const content=document.getElementById('myBetTicketDetailContent');
+ const close=()=>{overlay.classList.remove('open');document.body.style.overflow='';content.innerHTML='';};
+ document.getElementById('myBetDetailBack')?.addEventListener('click',close);
+ document.getElementById('myBetDetailClose')?.addEventListener('click',close);
+ overlay?.addEventListener('click',e=>{if(e.target===overlay)close();});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))close();});
+ document.getElementById('myBetsList')?.addEventListener('click',e=>{
+   const card=e.target.closest('.mybet-history-clickable');
+   if(!card||e.target.closest('button,a,summary,input,select,textarea'))return;
+   const head=card.querySelector('.mybet-card-head strong')?.textContent?.trim()||'Bet';
+   const state=card.dataset.ticketStatus||'settled';
+   const ref=card.dataset.ticketRef||'';
+   const stake=card.querySelector('.mybet-meta>div:first-child strong')?.textContent||'GH₵0.00';
+   const ret=card.querySelector('.mybet-return .amount')?.textContent||card.querySelector('.mybet-meta>div:nth-child(2) strong')?.textContent||'GH₵0.00';
+   const legs=[...card.querySelectorAll('.mybet-leg')].map((leg,i)=>{
+     const match=leg.querySelector('.mybet-leg-match')?.textContent?.trim()||'Match details unavailable';
+     const pick=leg.querySelector('.mybet-leg-title span:nth-child(2)')?.textContent?.trim()||'Selection';
+     const market=leg.querySelector('.mybet-market-inline')?.textContent?.trim()||'Market';
+     const score=leg.querySelector('.mybet-live-score')?.textContent?.trim()||'';
+     const time=leg.querySelector('.mybet-leg-time')?.textContent?.trim()||'';
+     const details=[...leg.querySelectorAll('.mybet-leg-details .mybet-selection')].map(x=>x.textContent.trim());
+     const odds=details.find(x=>x.toLowerCase().includes('odds at placement'))?.replace(/odds at placement:\s*/i,'')||pick.split('@').pop()?.trim()||'—';
+     const failed=state==='lost';
+     return `<section class="mybet-detail-leg ${failed?'failed':''}"><div class="mybet-detail-match-meta">Game ${i+1}${time?' · '+esc(time):''}</div><div class="mybet-detail-teams">${esc(match)}</div>${score?`<div class="mybet-detail-score">${esc(score)}</div>`:''}<div class="mybet-detail-pick"><span>Pick</span><strong>${esc(pick)}</strong><span>Market</span><strong>${esc(market)}</strong><span>Outcome</span><strong>${esc(state==='won'?'Won':state==='lost'?'Lost':'Settled')}</strong></div></section>`;
+   }).join('');
+   content.innerHTML=`<div class="mybet-detail-summary"><div class="mybet-detail-ref"><span>Bet reference: ${esc(ref)}</span><span>${esc(new Date().toLocaleDateString())}</span></div><div class="mybet-detail-kind"><strong>${esc(head)}</strong><span>${state==='won'?'🏆 Won':state==='lost'?'Lost':'Settled'}</span></div><div class="mybet-detail-total"><span>Total return</span><strong class="${state==='lost'?'lost-total':''}">${esc(ret)}</strong></div><div class="mybet-detail-numbers"><span>Total stake</span><strong>${esc(stake)}</strong><span>Number of games</span><strong>${card.querySelectorAll('.mybet-leg').length}</strong></div></div><div class="mybet-detail-legs">${legs||'<p>Match details are not available.</p>'}</div><div class="mybet-detail-footer"><div class="mybet-detail-row"><span>Bet details</span><strong>${esc(ref)}</strong></div><div class="mybet-detail-row"><span>Transaction history</span><span>Recorded in BLUSTAKE wallet ledger</span></div></div>`;
+   overlay.classList.add('open');document.body.style.overflow='hidden';
+ });
+ function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 })();
 </script>
 </body>
