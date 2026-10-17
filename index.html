@@ -508,6 +508,32 @@ body.show-home-hero .hero-carousel{display:block!important}
 .mybet-reference{padding:0 18px 12px!important;font-size:11px!important;color:#7b8798!important}
 @media(max-width:460px){.mybets-list{padding:12px!important}.mybet-card-head strong{font-size:17px!important}.mybet-leg{padding:16px 14px 12px!important}.mybet-leg-title{font-size:15px!important}.mybet-leg-match{font-size:15px!important}.mybet-meta{padding:14px!important}}
 
+
+
+/* Final polish: clean sportsbook ticket spacing, clear LIVE state, BLUSTAKE palette */
+.mybet-card{border:1px solid #d6e1eb!important;border-radius:18px!important;box-shadow:0 2px 8px rgba(22,58,95,.10)!important;background:#fff!important}
+.mybet-card-head{padding:16px 18px!important;min-height:52px!important;background:#254d73!important;color:#fff!important;border-bottom:1px solid #d6e1eb!important}
+.mybet-card-head strong{font-size:18px!important;text-align:left!important;order:0!important}
+.mybet-card-head .mybet-state{margin-left:auto!important;font-size:13px!important;letter-spacing:.2px!important}
+.mybet-card-head.won{background:#159447!important;color:#fff!important}
+.mybet-card-head.lost{background:#8b93a3!important;color:#fff!important}
+.mybet-card-head.pending{background:#254d73!important;color:#fff!important}
+.mybet-leg{padding:18px 18px 16px!important;border-bottom:1px solid #dce6ee!important}
+.mybet-leg-title{flex-wrap:wrap;row-gap:5px!important;margin-bottom:10px!important}
+.mybet-leg-match{font-size:16px!important;font-weight:800!important;color:#253b4e!important;text-decoration:underline!important;text-underline-offset:3px!important}
+.mybet-leg-time{font-size:14px!important;color:#718497!important}
+.mybet-live-badge{display:inline-flex!important;align-items:center!important;gap:5px!important;margin:2px 0 9px!important;padding:5px 9px!important;border-radius:6px!important;background:#159447!important;color:#fff!important;font-size:12px!important;font-weight:950!important}
+.mybet-live-score{font-size:14px!important;font-weight:900!important;color:#159447!important;margin:7px 0!important}
+.mybet-leg-details{border-top:1px solid #e0e8ef!important;padding-top:13px!important}
+.mybet-leg-details summary{font-size:13px!important;color:#718497!important;font-weight:800!important}
+.mybet-meta{padding:15px 18px!important;background:#fff!important}
+.mybet-meta small{font-size:14px!important;color:#526779!important;font-weight:700!important}
+.mybet-meta strong{font-size:16px!important;color:#182c40!important}
+.mybet-return{padding:15px 18px!important;border-top:1px solid #dce6ee!important;background:#f4f8fc!important;color:#182c40!important}
+.mybet-return .amount{font-size:20px!important;color:#159447!important}
+.mybet-return.lost .amount{color:#8b93a3!important}
+.mybet-reference{padding:0 18px 14px!important;color:#7b8798!important;background:#fff!important}
+@media(max-width:460px){.mybet-card-head{padding:14px!important}.mybet-leg{padding:16px 14px!important}.mybet-leg-title{font-size:16px!important}.mybet-meta{padding:13px 14px!important}}
 </style>
 </head>
 <body class="show-home-hero">
@@ -1871,29 +1897,3 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 </script>
 </body>
 </html>
-
-
-/* Final polish: clean sportsbook ticket spacing, clear LIVE state, BLUSTAKE palette */
-.mybet-card{border:1px solid #d6e1eb!important;border-radius:18px!important;box-shadow:0 2px 8px rgba(22,58,95,.10)!important;background:#fff!important}
-.mybet-card-head{padding:16px 18px!important;min-height:52px!important;background:#254d73!important;color:#fff!important;border-bottom:1px solid #d6e1eb!important}
-.mybet-card-head strong{font-size:18px!important;text-align:left!important;order:0!important}
-.mybet-card-head .mybet-state{margin-left:auto!important;font-size:13px!important;letter-spacing:.2px!important}
-.mybet-card-head.won{background:#159447!important;color:#fff!important}
-.mybet-card-head.lost{background:#8b93a3!important;color:#fff!important}
-.mybet-card-head.pending{background:#254d73!important;color:#fff!important}
-.mybet-leg{padding:18px 18px 16px!important;border-bottom:1px solid #dce6ee!important}
-.mybet-leg-title{flex-wrap:wrap;row-gap:5px!important;margin-bottom:10px!important}
-.mybet-leg-match{font-size:16px!important;font-weight:800!important;color:#253b4e!important;text-decoration:underline!important;text-underline-offset:3px!important}
-.mybet-leg-time{font-size:14px!important;color:#718497!important}
-.mybet-live-badge{display:inline-flex!important;align-items:center!important;gap:5px!important;margin:2px 0 9px!important;padding:5px 9px!important;border-radius:6px!important;background:#159447!important;color:#fff!important;font-size:12px!important;font-weight:950!important}
-.mybet-live-score{font-size:14px!important;font-weight:900!important;color:#159447!important;margin:7px 0!important}
-.mybet-leg-details{border-top:1px solid #e0e8ef!important;padding-top:13px!important}
-.mybet-leg-details summary{font-size:13px!important;color:#718497!important;font-weight:800!important}
-.mybet-meta{padding:15px 18px!important;background:#fff!important}
-.mybet-meta small{font-size:14px!important;color:#526779!important;font-weight:700!important}
-.mybet-meta strong{font-size:16px!important;color:#182c40!important}
-.mybet-return{padding:15px 18px!important;border-top:1px solid #dce6ee!important;background:#f4f8fc!important;color:#182c40!important}
-.mybet-return .amount{font-size:20px!important;color:#159447!important}
-.mybet-return.lost .amount{color:#8b93a3!important}
-.mybet-reference{padding:0 18px 14px!important;color:#7b8798!important;background:#fff!important}
-@media(max-width:460px){.mybet-card-head{padding:14px!important}.mybet-leg{padding:16px 14px!important}.mybet-leg-title{font-size:16px!important}.mybet-meta{padding:13px 14px!important}}
