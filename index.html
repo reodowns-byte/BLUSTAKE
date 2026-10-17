@@ -476,6 +476,38 @@ body.show-home-hero .hero-carousel{display:block!important}
 .match-details-panel .match{margin:0}.match-details-panel .fixture-markets{display:block!important}.match-details-panel .match-open{display:none}
 .match[data-fixture-id]{cursor:pointer}.match[data-fixture-id]:active{transform:scale(.997)}
 @media(min-width:700px){.match-details-backdrop{align-items:center;padding:20px}.match-details-panel{border-radius:20px;max-height:88vh}}
+
+/* Final polished open-ticket treatment, retaining BLUSTAKE navy/blue/white palette. */
+.mybets-page{background:#f3f7fb!important}
+.mybets-list{padding:14px 16px 28px!important}
+.mybet-card{border:1px solid #d4dee8!important;border-radius:20px!important;box-shadow:0 2px 7px rgba(17,48,77,.10)!important;margin-bottom:18px!important}
+.mybet-card-head{min-height:56px!important;padding:14px 18px!important;background:#fff!important;color:#182c40!important;border-bottom:1px solid #d7e1eb!important}
+.mybet-card-head strong{font-size:18px!important;text-align:left!important;color:#182c40!important}
+.mybet-card-head.pending{background:#fff!important;color:#182c40!important}
+.mybet-card-head.won{background:#fff!important;color:#182c40!important;border-top:5px solid #159447!important}
+.mybet-card-head.lost{background:#fff!important;color:#182c40!important;border-top:5px solid #8b93a3!important}
+.mybet-state{font-size:12px!important;letter-spacing:.35px!important;color:#245b8d!important}
+.mybet-state.live{color:#159447!important}
+.mybet-leg{padding:18px 18px 14px!important;border-bottom:1px solid #dce4eb!important;background:#fff!important}
+.mybet-leg-title{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:16px!important;margin-bottom:12px!important;color:#182c40!important}
+.mybet-sport-icon{font-size:22px!important;color:#53677b!important}
+.mybet-market-inline{font-size:14px;font-weight:700;color:#526274}
+.mybet-leg-match{font-size:16px!important;font-weight:850!important;color:#182c40!important;text-decoration:underline;text-decoration-color:#9aabba!important;text-underline-offset:3px;margin:0 0 8px!important}
+.mybet-leg-time{font-size:14px!important;font-weight:650;color:#526274!important;margin:0 0 8px!important}
+.mybet-live-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;margin:0 0 9px;border-radius:6px;background:#159447;color:#fff;font-size:12px;font-weight:900;letter-spacing:.2px}
+.mybet-live-score{font-size:14px!important;font-weight:850!important;color:#159447!important;margin:7px 0 0!important}
+.mybet-leg-details{margin-top:28px!important;border-top:0!important;padding-top:8px!important}
+.mybet-leg-details summary{font-size:13px!important;font-weight:800;color:#526274!important;text-align:right!important}
+.mybet-leg-details summary span{color:#159447;margin-left:4px}
+.mybet-meta{display:flex!important;flex-direction:column!important;gap:8px!important;padding:16px 18px!important;background:#fff!important}
+.mybet-meta>div{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:12px!important}
+.mybet-meta small{font-size:15px!important;font-weight:650!important;color:#526274!important}
+.mybet-meta strong{font-size:17px!important;font-weight:900!important;color:#182c40!important}
+.mybet-meta strong.amount-won{color:#159447!important}.mybet-meta strong.amount-lost{color:#8b93a3!important}
+.mybet-return{border-top:1px solid #dce4eb!important;padding:13px 18px!important}
+.mybet-reference{padding:0 18px 12px!important;font-size:11px!important;color:#7b8798!important}
+@media(max-width:460px){.mybets-list{padding:12px!important}.mybet-card-head strong{font-size:17px!important}.mybet-leg{padding:16px 14px 12px!important}.mybet-leg-title{font-size:15px!important}.mybet-leg-match{font-size:15px!important}.mybet-meta{padding:14px!important}}
+
 </style>
 </head>
 <body class="show-home-hero">
@@ -1019,7 +1051,7 @@ async function loadMyBets(){
     }
     const matchIds=[...new Set(markets.map(x=>x.match_id).filter(Boolean))];
     if(matchIds.length){
-      const fr=await supabaseClient.from("bluestake_matches").select("id,home_team,away_team,competition,kickoff_at,match_status,is_published,created_at").in("id",matchIds);
+      const fr=await supabaseClient.from("bluestake_matches").select("id,home_team,away_team,competition,kickoff_at,match_status,is_published,created_at,score_home,score_away,match_started_at,match_finished_at").in("id",matchIds);
       if(!fr.error)matches=fr.data||[];
     }
     const marketById=new Map(markets.map(x=>[String(x.id),x]));
@@ -1027,10 +1059,11 @@ async function loadMyBets(){
     const statusLabel=(b,related)=>{
       const raw=String(b.status||b.bet_status||"").toLowerCase();
       if(terminal(raw))return {label:raw.includes("won")?"WON":raw.includes("lost")?"LOST":raw.includes("void")?"VOID":raw.includes("cancel")?"CANCELLED":"SETTLED",cls:"settled"};
+      const db=related.map(m=>String(m.match_status||"").toLowerCase());
       const clocks=related.map(m=>fixtureClock(m));
-      if(clocks.some(c=>c.status==="first_half"||c.status==="second_half"))return {label:"● LIVE",cls:"live"};
-      if(clocks.some(c=>c.status==="half_time"))return {label:"HALF-TIME",cls:"live"};
-      if(clocks.some(c=>c.status==="full_time"))return {label:"AWAITING SETTLEMENT",cls:"scheduled"};
+      if(db.includes("finished")||clocks.some(c=>c.status==="full_time"))return {label:"AWAITING SETTLEMENT",cls:"scheduled"};
+      if(db.includes("half_time")||clocks.some(c=>c.status==="half_time"))return {label:"HALF-TIME",cls:"live"};
+      if(db.includes("live")||clocks.some(c=>["first_half","second_half"].includes(c.status)))return {label:"● LIVE",cls:"live"};
       if(related.length)return {label:"MATCH NOT STARTED",cls:"scheduled"};
       return {label:String(b.status||b.bet_status||"PENDING").toUpperCase(),cls:"scheduled"};
     };
@@ -1047,17 +1080,18 @@ async function loadMyBets(){
         const m=marketById.get(String(leg.market_id||leg.marketId));
         const match=m?matchById.get(String(m.match_id)):null;
         const c=match?fixtureClock(match):null;
-        const sc=match&&c?fixtureScore(match,c.minute):null;
+        const generatedSc=match&&c?fixtureScore(match,c.minute):null;const sc=match&&c?{home:Number(match.score_home??generatedSc?.home??0),away:Number(match.score_away??generatedSc?.away??0)}:null;
         const home=match?.home_team||leg.home_team||"Match";
         const away=match?.away_team||leg.away_team||"";
         const score=c&&sc?(c.status==="scheduled"?"VS":`${sc.home} : ${sc.away}`):"";
-        const live=!!c&&(c.status==="first_half"||c.status==="second_half"||c.status==="half_time");
-        const matchState=c?(c.status==="first_half"?`${c.minute}′ · FIRST HALF`:c.status==="second_half"?`${c.minute}′ · SECOND HALF`:c.status==="half_time"?"HALF-TIME":c.status==="full_time"?"FULL TIME":"MATCH NOT STARTED"):"MATCH DETAILS";
+        const dbStatus=String(match?.match_status||"").toLowerCase();
+        const live=!!match&&(dbStatus==="live"||dbStatus==="half_time"||c?.status==="first_half"||c?.status==="second_half"||c?.status==="half_time");
+        const matchState=match?(dbStatus==="finished"||c?.status==="full_time"?"FULL TIME":dbStatus==="half_time"||c?.status==="half_time"?"HALF-TIME":dbStatus==="live"?(c?.minute?`${c.minute}′ · LIVE`:"LIVE"):c?.status==="first_half"?`${c.minute}′ · FIRST HALF`:c?.status==="second_half"?`${c.minute}′ · SECOND HALF` : "MATCH NOT STARTED"):"MATCH DETAILS";
         const pick=(m?.selection_name||leg.selection_name||leg.selection||"Selection");
         const marketName=(m?.market_name||leg.market_name||"Market");
         const legOdds=Number(leg.odds_at_placement??m?.odds??leg.odds??1);
         const kickoff=match?.kickoff_at?new Date(match.kickoff_at).toLocaleString([], {day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"Kick-off time unavailable";
-        return `<div class="mybet-leg"><div class="mybet-leg-title"><span class="mybet-sport-icon">⚽</span><span>${escapeHtml(pick)} @ ${Number.isFinite(legOdds)?legOdds.toFixed(2):"—"}</span><span style="color:#8b94a3;font-size:13px;font-weight:600">${escapeHtml(marketName)}</span></div>${live&&c&&c.status!=="half_time"?`<div class="mybet-live-odds">Live match · ${Number.isFinite(legOdds)?legOdds.toFixed(2):"—"}</div>`:""}<div class="mybet-leg-match">${escapeHtml(home)}${away?" vs "+escapeHtml(away):""}</div>${live||c?.status==="full_time"?`<div class="mybet-live-score">${escapeHtml(matchState)}${score?" | "+escapeHtml(score):""}</div>`:`<div class="mybet-leg-time">${escapeHtml(kickoff)}</div><div class="mybet-selection">${escapeHtml(match?.competition||"")} · ${escapeHtml(matchState)}</div>`}<details class="mybet-leg-details"><summary>Show Match Details ▾</summary><div class="mybet-market">${escapeHtml(marketName)}: ${escapeHtml(pick)}</div><div class="mybet-selection">Odds at placement: ${Number.isFinite(legOdds)?legOdds.toFixed(2):"—"}</div><div class="mybet-selection">${escapeHtml(match?.competition||"Football")}</div></details></div>`;
+        return `<div class="mybet-leg"><div class="mybet-leg-title"><span class="mybet-sport-icon">◷</span><span>${escapeHtml(pick)} @ ${Number.isFinite(legOdds)?legOdds.toFixed(2):"—"}</span><span class="mybet-market-inline">${escapeHtml(marketName)}</span></div>${live?`<div class="mybet-live-badge">● LIVE ${sc?escapeHtml(`${sc.home}:${sc.away}`):""} ${c?.minute?escapeHtml(`${c.minute}′`):""}</div>`:""}<div class="mybet-leg-match">${escapeHtml(home)}${away?" vs "+escapeHtml(away):""}</div>${live||c?.status==="full_time"||String(match?.match_status||"").toLowerCase()==="finished"?`<div class="mybet-live-score">${escapeHtml(matchState)}${score?" | "+escapeHtml(score):""}</div>`:`<div class="mybet-leg-time">${escapeHtml(kickoff)}</div>`}<details class="mybet-leg-details"><summary>Show Match Details <span>⌄</span></summary><div class="mybet-market">${escapeHtml(marketName)}: ${escapeHtml(pick)}</div><div class="mybet-selection">Odds at placement: ${Number.isFinite(legOdds)?legOdds.toFixed(2):"—"}</div><div class="mybet-selection">${escapeHtml(match?.competition||"Football")}</div></details></div>`;
       }).join(""):`<div class="mybet-leg"><div class="mybet-selection">Match selections are saved, but detailed market records are not available to this account yet.</div></div>`;
       const isWon=String(b.status||b.bet_status||"").toLowerCase().includes("won");
       const isLost=String(b.status||b.bet_status||"").toLowerCase().includes("lost");
@@ -1069,7 +1103,7 @@ async function loadMyBets(){
       const headClass=isHistory?(isWon?"won":isLost?"lost":"pending"):"pending";
       const returnClass=isHistory&&isLost?"lost":"";
       const displayState=isHistory?(isWon?"🏆 Won":isLost?"Lost":"Settled"):state.label;
-      return `<article class="mybet-card"><div class="mybet-card-head ${headClass}"><span class="mybet-state ${state.cls}">${escapeHtml(displayState)}</span><strong>${escapeHtml(ticketType)}${!isHistory&&state.cls==="live"?` <span style="background:#dcebe2;color:#138b58;padding:3px 5px">Live</span>`:""}</strong></div>${legHtml}<div class="mybet-meta"><div><small>Stake</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>${isHistory?"Total Return":"Pot. Win"}</small><strong>${escapeHtml(money(returnValue))}</strong></div></div><div class="mybet-return ${returnClass}"><span>${isHistory?"Total Return":"Potential Return"}</span><span class="amount">${escapeHtml(money(returnValue))}</span></div><div class="mybet-reference">Bet reference: ${escapeHtml(shortRef)}</div></article>`;
+      return `<article class="mybet-card"><div class="mybet-card-head ${headClass}"><span class="mybet-state ${state.cls}">${escapeHtml(displayState)}</span><strong>${escapeHtml(ticketType)}</strong></div><div class="mybet-legs-wrap">${legHtml}</div><div class="mybet-meta"><div><small>Stake</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>${isHistory?"Total Return":"Pot. Win"}</small><strong class="${isHistory&&isLost?"amount-lost":isHistory&&isWon?"amount-won":""}">${escapeHtml(money(returnValue))}</strong></div></div>${isHistory?`<div class="mybet-return ${returnClass}"><span>Total Return</span><span class="amount">${escapeHtml(money(returnValue))}</span></div>`:""}<div class="mybet-reference">Bet reference: ${escapeHtml(shortRef)}</div></article>`;
     }).join("");
   }catch(err){
     list.classList.remove("hidden");
@@ -1837,3 +1871,29 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 </script>
 </body>
 </html>
+
+
+/* Final polish: clean sportsbook ticket spacing, clear LIVE state, BLUSTAKE palette */
+.mybet-card{border:1px solid #d6e1eb!important;border-radius:18px!important;box-shadow:0 2px 8px rgba(22,58,95,.10)!important;background:#fff!important}
+.mybet-card-head{padding:16px 18px!important;min-height:52px!important;background:#254d73!important;color:#fff!important;border-bottom:1px solid #d6e1eb!important}
+.mybet-card-head strong{font-size:18px!important;text-align:left!important;order:0!important}
+.mybet-card-head .mybet-state{margin-left:auto!important;font-size:13px!important;letter-spacing:.2px!important}
+.mybet-card-head.won{background:#159447!important;color:#fff!important}
+.mybet-card-head.lost{background:#8b93a3!important;color:#fff!important}
+.mybet-card-head.pending{background:#254d73!important;color:#fff!important}
+.mybet-leg{padding:18px 18px 16px!important;border-bottom:1px solid #dce6ee!important}
+.mybet-leg-title{flex-wrap:wrap;row-gap:5px!important;margin-bottom:10px!important}
+.mybet-leg-match{font-size:16px!important;font-weight:800!important;color:#253b4e!important;text-decoration:underline!important;text-underline-offset:3px!important}
+.mybet-leg-time{font-size:14px!important;color:#718497!important}
+.mybet-live-badge{display:inline-flex!important;align-items:center!important;gap:5px!important;margin:2px 0 9px!important;padding:5px 9px!important;border-radius:6px!important;background:#159447!important;color:#fff!important;font-size:12px!important;font-weight:950!important}
+.mybet-live-score{font-size:14px!important;font-weight:900!important;color:#159447!important;margin:7px 0!important}
+.mybet-leg-details{border-top:1px solid #e0e8ef!important;padding-top:13px!important}
+.mybet-leg-details summary{font-size:13px!important;color:#718497!important;font-weight:800!important}
+.mybet-meta{padding:15px 18px!important;background:#fff!important}
+.mybet-meta small{font-size:14px!important;color:#526779!important;font-weight:700!important}
+.mybet-meta strong{font-size:16px!important;color:#182c40!important}
+.mybet-return{padding:15px 18px!important;border-top:1px solid #dce6ee!important;background:#f4f8fc!important;color:#182c40!important}
+.mybet-return .amount{font-size:20px!important;color:#159447!important}
+.mybet-return.lost .amount{color:#8b93a3!important}
+.mybet-reference{padding:0 18px 14px!important;color:#7b8798!important;background:#fff!important}
+@media(max-width:460px){.mybet-card-head{padding:14px!important}.mybet-leg{padding:16px 14px!important}.mybet-leg-title{font-size:16px!important}.mybet-meta{padding:13px 14px!important}}
