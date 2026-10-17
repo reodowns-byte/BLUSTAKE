@@ -1067,7 +1067,7 @@ async function loadMyBets(){
   const isHistory=$("betHistoryTab").classList.contains("active");
   const empty=isHistory?$("betHistoryEmpty"):$("openBetsEmpty");
   list.classList.remove("hidden");
-  list.innerHTML='<div class="notice">Loading your bets…</div>';
+  list.innerHTML=''; // Keep the loading state silent: no visible loading box while bets refresh.
   empty.classList.add("hidden");
   try{
     const {data,error}=await supabaseClient.from("bluestake_bets").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
