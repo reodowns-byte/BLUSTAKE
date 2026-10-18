@@ -62,6 +62,41 @@ export default async function handler(req, res) {
     }
   }
 
+  async function supabaseRequest(path, options = {}) {
+    const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+      ...options,
+      headers: { ...headers, ...(options.headers || {}) }
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`Supabase request failed (${response.status}): ${detail.slice(0, 400)}`);
+    }
+    if (response.status === 204) return null;
+    return response.json().catch(() => null);
+  }
+
+  async function closeExternalMarkets(matchId, exceptKeys = null) {
+    const existing = await supabaseRequest(
+      `bluestake_markets?select=id,external_market_key,external_selection_key&match_id=eq.${encodeURIComponent(matchId)}&external_market_key=not.is.null&external_selection_key=not.is.null`
+    );
+    if (!Array.isArray(existing) || !existing.length) return 0;
+    const keep = exceptKeys ? new Set(exceptKeys) : new Set();
+    const staleIds = existing
+      .filter(row => !exceptKeys || !keep.has(`${row.external_market_key}|${row.external_selection_key}`))
+      .map(row => row.id)
+      .filter(id => /^[0-9a-f-]{36}$/i.test(String(id)));
+    let changed = 0;
+    for (const id of staleIds) {
+      await supabaseRequest(`bluestake_markets?id=eq.${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ is_open: false, updated_at: new Date().toISOString() })
+      });
+      changed += 1;
+    }
+    return changed;
+  }
+
   const validDate = value => {
     if (!value) return null;
     const d = new Date(value);
@@ -191,22 +226,37 @@ export default async function handler(req, res) {
     // Keep this low to respect provider rate limits. Existing bets are not updated.
     const oddsCandidates = usableFixtures.filter(f => f.status === 'upcoming' || f.status === 'live').slice(0, 5);
     let marketCount = 0;
+    let staleSelectionsClosed = 0;
+    let finishedMarketsClosed = 0;
     let oddsErrors = 0;
+
+    // Finished/cancelled external matches must not keep their provider markets open.
+    for (const fixture of usableFixtures.filter(f => ['finished', 'cancelled', 'postponed'].includes(f.status))) {
+      try {
+        const matchRows = await supabaseRequest(
+          `bluestake_matches?select=id&external_provider=eq.${encodeURIComponent(provider)}&external_fixture_id=eq.${encodeURIComponent(fixture.id)}&limit=1`
+        );
+        if (Array.isArray(matchRows) && matchRows[0]?.id) {
+          finishedMarketsClosed += await closeExternalMarkets(matchRows[0].id);
+        }
+      } catch (_) {
+        oddsErrors += 1;
+      }
+    }
 
     for (const fixture of oddsCandidates) {
       try {
+        // Only close stale selections after a successful provider response with at least
+        // one recognized market. Empty/unrecognized responses are not proof that odds vanished.
         const oddsResponse = await providerGet(`/fixtures/${encodeURIComponent(fixture.id)}/odds`);
         const markets = extractMarkets(oddsResponse);
         if (!markets.length) continue;
 
-        const matchLookup = await fetch(
-          `${supabaseUrl}/rest/v1/bluestake_matches?select=id&external_provider=eq.${encodeURIComponent(provider)}&external_fixture_id=eq.${encodeURIComponent(fixture.id)}&limit=1`,
-          { headers }
+        const matchRows = await supabaseRequest(
+          `bluestake_matches?select=id&external_provider=eq.${encodeURIComponent(provider)}&external_fixture_id=eq.${encodeURIComponent(fixture.id)}&limit=1`
         );
-        if (!matchLookup.ok) throw new Error(`Supabase match lookup failed (${matchLookup.status})`);
-        const matches = await matchLookup.json();
-        if (!Array.isArray(matches) || !matches[0]?.id) continue;
-        const matchId = matches[0].id;
+        if (!Array.isArray(matchRows) || !matchRows[0]?.id) continue;
+        const matchId = matchRows[0].id;
         const rows = markets.map(m => ({
           match_id: matchId,
           market_name: m.market_name,
@@ -219,6 +269,8 @@ export default async function handler(req, res) {
           updated_at: new Date().toISOString()
         }));
         await supabaseUpsert('bluestake_markets', rows, 'match_id,external_market_key,external_selection_key');
+        const currentKeys = rows.map(row => `${row.external_market_key}|${row.external_selection_key}`);
+        staleSelectionsClosed += await closeExternalMarkets(matchId, currentKeys);
         marketCount += rows.length;
       } catch (_) {
         oddsErrors += 1;
@@ -232,8 +284,10 @@ export default async function handler(req, res) {
       fixturesUpserted: fixtureRows.length,
       oddsFixturesAttempted: oddsCandidates.length,
       marketSelectionsUpserted: marketCount,
+      staleSelectionsClosed,
+      finishedMarketsClosed,
       oddsFixtureErrors: oddsErrors,
-      note: 'Admin-created matches and historical bet records are not modified. Only supported provider markets are synced.'
+      note: 'Only external-provider match rows and external market selections are synchronized. Existing bet records and odds snapshots are not modified.'
     });
   } catch (error) {
     return res.status(502).json({ error: 'Football synchronization failed', details: String(error?.message || error).slice(0, 700) });
