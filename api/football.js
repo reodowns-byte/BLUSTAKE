@@ -53,6 +53,20 @@ export default async function handler(req, res) {
         const line = goal.line ?? "";
         add(line !== "" ? `Total Goals ${line}` : "Total Goals", [{ value: line !== "" ? `Over ${line}` : "Over", odd: goal.over }, { value: line !== "" ? `Under ${line}` : "Under", odd: goal.under }]);
       }
+      // Bet365 fixed goal-line ladder provides each total (0.5, 1.5, 2.5 …) separately.
+      // Keep the live/closing/opening priority consistent with the provider's documented shape.
+      const fixed = root.goal_line_fixed;
+      const fixedRows = Array.isArray(fixed) ? fixed : (fixed && typeof fixed === "object" ? Object.entries(fixed).map(([line, row]) => ({ line: row?.line ?? line, ...(row || {}) })) : []);
+      for (const row of fixedRows) {
+        const quote = latest(row);
+        if (!quote || typeof quote !== "object") continue;
+        const line = quote.line ?? row.line ?? "";
+        if (line === "") continue;
+        add(`Total Goals ${line}`, [
+          { value: `Over ${line}`, odd: quote.over },
+          { value: `Under ${line}`, odd: quote.under }
+        ]);
+      }
       const btts = latest(root.btts || root.both_teams_to_score);
       if (btts) add("Both Teams to Score", [{ value: "Yes", odd: btts.yes }, { value: "No", odd: btts.no }]);
       for (const [key, label] of [["asian_handicap", "Asian Handicap"], ["corner_line", "Corners"], ["card_line", "Cards"], ["asian_handicap_half", "Half Time Asian Handicap"], ["goal_line_half", "Half Time Goals"], ["corner_line_half", "Half Time Corners"]]) {
