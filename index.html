@@ -1845,7 +1845,7 @@ function apiMatchWinnerOdds(oddsRecord){
   }
   return null;
 }
-function renderApiFixtureCard(f){const fixture=f.fixture||{},league=f.league||{},teams=f.teams||{},goals=f.goals||{},status=apiFixtureStatus(f),live=status==="LIVE",finished=status==="FINISHED";const home=teams.home||{},away=teams.away||{},oddsRecord=apiOddsByFixture.get(String(fixture.id)),odds=apiMatchWinnerOdds(oddsRecord);const logo=(team)=>team.logo?`<img src="${escapeHtml(team.logo)}" alt="" loading="lazy" style="width:22px;height:22px;object-fit:contain;flex:0 0 22px">`:"";const statusText=live?`${escapeHtml(fixture.status?.long||"LIVE")}${fixture.status?.elapsed!=null?` · ${Number(fixture.status.elapsed)}′`:""}`:finished?escapeHtml(fixture.status?.long||"FINISHED"):"UPCOMING";const matchLabel=(home.name||"Home")+" vs "+(away.name||"Away");const oddsHtml=odds?`<div class="compact-api-odds"><span class="compact-feed-label">${escapeHtml(odds.bookmaker)} · 1X2</span><div class="compact-api-odds-grid">${[{label:"Home",value:odds.home},{label:"Draw",value:odds.draw},{label:"Away",value:odds.away}].map(x=>`<button type="button" class="compact-api-odd api-odd-select" data-external-fixture="${escapeHtml(fixture.id)}" data-external-match="${escapeHtml(matchLabel)}" data-market="Match Winner · ${x.label}" data-odds="${x.value}" aria-label="Select ${x.label} at ${x.value}"><small>${x.label}</small><strong>${x.value.toFixed(2)}</strong></button>`).join("")}</div></div>`:`<div class="compact-api-odds"><span class="compact-feed-label">${finished?"OFFICIAL FIXTURE":"ODDS LOADING"}</span><span class="compact-odds-unavailable">${finished?"Match finished":"Loading odds…"}</span></div>`;return `<article class="match api-fixture-card compact-fixture" data-api-fixture="1" data-api-fixture-id="${escapeHtml(fixture.id)}" data-api-status="${status}" data-api-date="${escapeHtml(localDateKey(fixture.date))}" data-search-text="${escapeHtml(`${league.name||"Football"} ${league.country||""} ${home.name||"Home"} ${away.name||"Away"}`.toLowerCase())}"><div class="league"><span>${escapeHtml(league.name||"Football")}${league.country?` · ${escapeHtml(league.country)}`:""}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${statusText}</span></div><div class="match-body compact-match-body"><div class="compact-match-meta"><span>${live?"LIVE SCORE":finished?"FINISHED":"KICK-OFF"}</span><span>${apiFixtureTime(f)}</span></div><div class="compact-match-main"><div class="compact-team-list"><div class="compact-team">${logo(home)}<span>${escapeHtml(home.name||"Home team")}</span><strong>${goals.home??"—"}</strong></div><div class="compact-team">${logo(away)}<span>${escapeHtml(away.name||"Away team")}</span><strong>${goals.away??"—"}</strong></div></div>${oddsHtml}</div><div class="match-tap-hint">Tap match to view all markets</div></div></article>`;}
+function renderApiFixtureCard(f){const fixture=f.fixture||{},league=f.league||{},teams=f.teams||{},goals=f.goals||{},status=apiFixtureStatus(f),live=status==="LIVE",finished=status==="FINISHED";const home=teams.home||{},away=teams.away||{},oddsRecord=apiOddsByFixture.get(String(fixture.id)),odds=apiMatchWinnerOdds(oddsRecord);const logo=(team)=>team.logo?`<img src="${escapeHtml(team.logo)}" alt="" loading="lazy" style="width:22px;height:22px;object-fit:contain;flex:0 0 22px">`:"";const statusText=live?`${escapeHtml(fixture.status?.long||"LIVE")}${fixture.status?.elapsed!=null?` · ${Number(fixture.status.elapsed)}′`:""}`:finished?escapeHtml(fixture.status?.long||"FINISHED"):"UPCOMING";const matchLabel=(home.name||"Home")+" vs "+(away.name||"Away");const oddsHtml=odds?`<div class="compact-api-odds"><span class="compact-feed-label">${escapeHtml(odds.bookmaker)} · 1X2</span><div class="compact-api-odds-grid">${[{label:"Home",value:odds.home},{label:"Draw",value:odds.draw},{label:"Away",value:odds.away}].map(x=>`<button type="button" class="compact-api-odd api-odd-select" data-external-fixture="${escapeHtml(fixture.id)}" data-external-match="${escapeHtml(matchLabel)}" data-market="Match Winner · ${x.label}" data-odds="${x.value}" aria-label="Select ${x.label} at ${x.value}"><small>${x.label}</small><strong>${x.value.toFixed(2)}</strong></button>`).join("")}</div></div>`:`<div class="compact-api-odds"><span class="compact-feed-label">${finished?"OFFICIAL FIXTURE":(oddsRecord?.rateLimited?"API RATE LIMIT":"OFFICIAL FIXTURE")}</span><span class="compact-odds-unavailable">${finished?"Match finished":(oddsRecord?.rateLimited?"Odds temporarily limited":"Odds not available")}</span></div>`;return `<article class="match api-fixture-card compact-fixture" data-api-fixture="1" data-api-fixture-id="${escapeHtml(fixture.id)}" role="button" tabindex="0" aria-label="Open markets for ${escapeHtml(matchLabel)}" data-api-status="${status}" data-api-date="${escapeHtml(localDateKey(fixture.date))}" data-search-text="${escapeHtml(`${league.name||"Football"} ${league.country||""} ${home.name||"Home"} ${away.name||"Away"}`.toLowerCase())}"><div class="league"><span>${escapeHtml(league.name||"Football")}${league.country?` · ${escapeHtml(league.country)}`:""}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${statusText}</span></div><div class="match-body compact-match-body"><div class="compact-match-meta"><span>${live?"LIVE SCORE":finished?"FINISHED":"KICK-OFF"}</span><span>${apiFixtureTime(f)}</span></div><div class="compact-match-main"><div class="compact-team-list"><div class="compact-team">${logo(home)}<span>${escapeHtml(home.name||"Home team")}</span><strong>${goals.home??"—"}</strong></div><div class="compact-team">${logo(away)}<span>${escapeHtml(away.name||"Away team")}</span><strong>${goals.away??"—"}</strong></div></div>${oddsHtml}</div><div class="match-tap-hint">Tap match to view all markets</div></div></article>`;}
 
 function applyFixtureFilters(){const q=fixtureSearchQuery;const today=dateKeyOffset(0),tomorrow=dateKeyOffset(1);document.querySelectorAll("#matches .match").forEach(card=>{const isApi=card.hasAttribute("data-api-fixture");let show=true;if(isApi){const status=card.dataset.apiStatus,date=card.dataset.apiDate;if(activeFixtureFilter==="LIVE")show=status==="LIVE";else if(activeFixtureFilter==="TODAY")show=date===today;else if(activeFixtureFilter==="TOMORROW")show=date===tomorrow;else if(activeFixtureFilter==="FINISHED")show=status==="FINISHED";else show=true;}else{const text=card.textContent.toLowerCase();if(activeFixtureFilter==="LIVE")show=/\bLIVE\b|\bHT\b|first_half|second_half/i.test(text);else if(activeFixtureFilter==="FINISHED")show=/\bFT\b|FINISHED|full_time/i.test(text);else if(activeFixtureFilter==="TODAY")show=localDateKey(card.querySelector(".match-top span:last-child")?.textContent||"")===today||card.textContent.toLowerCase().includes("live match");else if(activeFixtureFilter==="TOMORROW")show=false;}if(q&&!card.textContent.toLowerCase().includes(q))show=false;card.classList.toggle("hidden",!show);});const count=[...document.querySelectorAll("#matches .match")].filter(x=>!x.classList.contains("hidden")).length;const countEl=document.querySelector(".events-count");if(countEl)countEl.textContent=`${count} fixtures`;}
 
@@ -1860,7 +1860,7 @@ async function loadFixtures(){
   const today=dateKeyOffset(0),tomorrow=dateKeyOffset(1);
   const apiFixturesPromise=(async()=>{
     const now=Date.now();
-    if(window.__blustakeFiveDollarFixtures && now-(window.__blustakeFiveDollarFixturesAt||0)<60000) return window.__blustakeFiveDollarFixtures;
+    if(window.__blustakeFiveDollarFixtures && now-(window.__blustakeFiveDollarFixturesAt||0)<10*60*1000) return window.__blustakeFiveDollarFixtures;
     const urls=["/api/football?type=fixtures&status=live",`/api/football?type=fixtures&date=${today}`,`/api/football?type=fixtures&date=${tomorrow}`];
     const responses=await Promise.all(urls.map(async url=>{const r=await fetch(url,{headers:{Accept:"application/json"}});const data=await r.json().catch(()=>({}));if(!r.ok||data.error)throw new Error(data.error||`Football API request failed (${r.status})`);return Array.isArray(data.response)?data.response:[]}));
     const unique=new Map();responses.flat().forEach(f=>{if(f?.fixture?.id!=null)unique.set(String(f.fixture.id),f);});
@@ -1869,14 +1869,14 @@ async function loadFixtures(){
   // Load match-winner odds before rendering the cards. Cache locally for 10 minutes and limit concurrency to protect the free API quota.
   const apiOddsPromise=(async()=>{
     const result=new Map();
-    const cacheKey="blustake5dollarOddsCacheV1";let saved={};try{saved=JSON.parse(localStorage.getItem(cacheKey)||"{}")}catch(_){saved={}}
+    const cacheKey="blustake5dollarOddsCacheV2";let saved={};try{saved=JSON.parse(localStorage.getItem(cacheKey)||"{}")}catch(_){saved={}}
     const now=Date.now();const pending=[];
-    for(const f of (await apiFixturesPromise).slice(0,40)){
+    for(const f of (await apiFixturesPromise).slice(0,35)){
       const id=String(f?.fixture?.id||"");if(!id)continue;
-      const hit=saved[id];if(hit&&now-hit.at<10*60*1000){result.set(id,hit.value);continue;}
+      const hit=saved[id];if(hit&&now-hit.at<55*60*1000){result.set(id,hit.value);continue;}
       pending.push({id,f});
     }
-    let cursor=0;const workers=Array.from({length:3},async()=>{while(cursor<pending.length){const item=pending[cursor++];try{const r=await fetch(`/api/football?type=odds&id=${encodeURIComponent(item.id)}`,{headers:{Accept:"application/json"}});const d=await r.json().catch(()=>({}));if(r.ok&&!d.error){const markets=Array.isArray(d.markets)?d.markets:[];const winner=markets.find(m=>/^(match winner|match result|1x2|full.?time result)$/i.test(String(m.name||"")));if(winner){const find=names=>(winner.values||[]).find(v=>names.includes(String(v.value||"").toLowerCase()));const h=find(["home","1"]),dr=find(["draw","x"]),a=find(["away","2"]);if(h&&dr&&a){const val={bookmakers:[{name:"Bet365",bets:[{name:"Match Winner",values:[{value:"Home",odd:h.odd},{value:"Draw",odd:dr.odd},{value:"Away",odd:a.odd}]}]}],markets};result.set(item.id,val);saved[item.id]={at:now,value:val};}}}}catch(err){console.warn("Could not load odds for fixture",item.id,err);}}});
+    let cursor=0;const workers=Array.from({length:3},async()=>{while(cursor<pending.length){const item=pending[cursor++];try{const r=await fetch(`/api/football?type=odds&id=${encodeURIComponent(item.id)}`,{headers:{Accept:"application/json"}});const d=await r.json().catch(()=>({}));if(r.ok&&!d.error){const markets=Array.isArray(d.markets)?d.markets:[];const winner=markets.find(m=>/^(match winner|match result|1x2|full.?time result)$/i.test(String(m.name||"")));let val={markets};if(winner){const find=names=>(winner.values||[]).find(v=>names.includes(String(v.value||"").toLowerCase()));const h=find(["home","1"]),dr=find(["draw","x"]),a=find(["away","2"]);if(h&&dr&&a)val={bookmakers:[{name:"Bet365",bets:[{name:"Match Winner",values:[{value:"Home",odd:h.odd},{value:"Draw",odd:dr.odd},{value:"Away",odd:a.odd}]}]}],markets};}result.set(item.id,val);saved[item.id]={at:now,value:val};}else if(r.status===429){saved[item.id]={at:now,value:{markets:[],rateLimited:true}};}}catch(err){console.warn("Could not load odds for fixture",item.id,err);}}});
     await Promise.all(workers);try{localStorage.setItem(cacheKey,JSON.stringify(saved))}catch(_){}return result;
   })();
   let manualError=null;
@@ -1916,13 +1916,43 @@ async function openOfficialFixtureDetails(card){
   const homeLogo=teams.home?.logo?`<img src="${escapeHtml(teams.home.logo)}" alt="">`:"";
   const awayLogo=teams.away?.logo?`<img src="${escapeHtml(teams.away.logo)}" alt="">`:"";
   const status=String(fixture.status?.long||"Scheduled");
-  const groups=markets.map((m,i)=>{
-    const marketName=String(m.name||"Market"),low=marketName.toLowerCase();
-    const values=(m.values||[]).filter(v=>Number(v.odd)>1);
-    if(!values.length)return "";
-    const gridClass=/over.?under|total goals|asian handicap|handicap|correct score/i.test(marketName)?"market-market-table":"market-grid";
-    const items=values.map(v=>`<button type="button" class="market api-modal-market" data-external-fixture="${escapeHtml(id)}" data-external-match="${escapeHtml(fixtureLabel)}" data-market="${escapeHtml(marketName+" · "+(v.value||"Selection"))}" data-odds="${Number(v.odd)}"><small>${escapeHtml(v.value||"Selection")}</small><strong>${Number(v.odd).toFixed(2)}</strong></button>`).join("");
-    return `<section class="market-group" data-market-category="${/goal|score|over|under|both teams|1x2|winner|result|handicap/i.test(low)?"Goals":/half|ht|1st|2nd/i.test(low)?"Half":/corner/i.test(low)?"Corners":/card|booking/i.test(low)?"Bookings":"Main"}"><h4>${escapeHtml(marketName)}</h4>${/over.?under|total goals/i.test(marketName)?'<div class="market-table-head"><span></span><span>Over</span><span>Under</span></div>':""}<div class="${gridClass}">${items}</div></section>`;
+  const normalizedGroups=[];
+  for(const m of markets){
+    const rawName=String(m.name||"Market").trim();
+    const values=(Array.isArray(m.values)?m.values:[]).map(v=>({value:String(v.value??v.name??v.selection??""),odd:Number(v.odd??v.odds??v.price)})).filter(v=>v.value&&Number.isFinite(v.odd)&&v.odd>1);
+    if(!values.length)continue;
+    const isGoals=/over.?under|total goals|goal line/i.test(rawName);
+    if(isGoals){
+      const buckets=new Map();
+      for(const v of values){
+        const lineMatch=(v.value+' '+rawName).match(/(?:over|under|total goals|goal line)\s*([0-9]+(?:\.[0-9]+)?)/i);
+        const line=lineMatch?lineMatch[1]:'';
+        const sideMatch=v.value.match(/\b(over|under)\b/i);
+        if(line&&sideMatch){
+          const title=`Total Goals ${line}`;
+          if(!buckets.has(title))buckets.set(title,[]);
+          buckets.get(title).push({value:`${sideMatch[1][0].toUpperCase()+sideMatch[1].slice(1).toLowerCase()} ${line}`,odd:v.odd});
+        }
+      }
+      if(buckets.size){for(const [name,vals] of buckets)normalizedGroups.push({name,values:vals,kind:'goals'});continue;}
+    }
+    normalizedGroups.push({name:rawName,values,kind:/correct score/i.test(rawName)?'correct-score':isGoals?'goals':'standard'});
+  }
+  const renderPick=(marketName,v)=>`<button type="button" class="market api-modal-market" data-external-fixture="${escapeHtml(id)}" data-external-match="${escapeHtml(fixtureLabel)}" data-market="${escapeHtml(marketName+" · "+v.value)}" data-odds="${Number(v.odd)}"><small>${escapeHtml(v.value)}</small><strong>${Number(v.odd).toFixed(2)}</strong></button>`;
+  const groups=normalizedGroups.map(m=>{
+    const marketName=m.name,low=marketName.toLowerCase();
+    const category=/goal|score|over|under|both teams|1x2|winner|result|handicap/i.test(low)?"Goals":/half|ht|1st|2nd/i.test(low)?"Half":/corner/i.test(low)?"Corners":/card|booking/i.test(low)?"Bookings":"Main";
+    if(m.kind==='correct-score'){
+      const columns=[{title:teams.home?.name||'Home',items:[]},{title:'Draw',items:[]},{title:teams.away?.name||'Away',items:[]}];
+      for(const v of m.values){const score=v.value.match(/(\d+)\s*[-:–]\s*(\d+)/);if(!score){columns[1].items.push(v);continue;}const h=Number(score[1]),a=Number(score[2]);columns[h>a?0:h===a?1:2].items.push(v);}
+      return `<section class="market-group correct-score-group" data-market-category="${category}"><h4>${escapeHtml(marketName)}</h4><div class="correct-score-columns">${columns.map(col=>`<div class="correct-score-column"><div class="correct-score-column-title">${escapeHtml(col.title)}</div>${col.items.map(v=>renderPick(marketName,v)).join('')}</div>`).join('')}</div></section>`;
+    }
+    if(m.kind==='goals'){
+      return `<section class="market-group total-goals-group" data-market-category="${category}"><h4>${escapeHtml(marketName)}</h4><div class="total-goals-grid">${m.values.map(v=>renderPick(marketName,v)).join('')}</div></section>`;
+    }
+    const gridClass='market-grid';
+    const items=m.values.map(v=>renderPick(marketName,v)).join('');
+    return `<section class="market-group" data-market-category="${category}"><h4>${escapeHtml(marketName)}</h4><div class="${gridClass}">${items}</div></section>`;
   }).join("");
   const marketHtml=groups.trim()?groups:'<div class="notice">No market odds were returned for this fixture. Try another match or check again later.</div>';
   content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div>
@@ -2308,6 +2338,24 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 #matches .compact-fixture .market-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 @media(max-width:390px){#matches .compact-match-main{grid-template-columns:minmax(0,1fr) minmax(132px,1fr);gap:6px}#matches .compact-team{font-size:12px;gap:5px;grid-template-columns:auto minmax(0,1fr) 17px}#matches .compact-team>strong{font-size:13px}#matches .compact-manual-odds .compact-odd{font-size:12px;padding:8px 1px}#matches .compact-manual-odds .compact-odd small{font-size:9px}#matches .compact-match-meta{font-size:10px}}
 @media(min-width:700px){#matches .compact-fixture{border-radius:8px}#matches .compact-match-body{padding:14px}}
+
+/* Reference-style clickable goal lines and correct-score columns */
+.match-details-panel .total-goals-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.match-details-panel .total-goals-grid .market{min-height:70px;padding:14px 12px;background:#dcebe0!important;color:#2f6c3a!important;display:flex;justify-content:space-between;text-align:left}
+.match-details-panel .total-goals-grid .market small{font-size:15px;font-weight:650}
+.match-details-panel .total-goals-grid .market strong{font-size:20px;font-weight:950}
+.match-details-panel .correct-score-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start}
+.match-details-panel .correct-score-column{display:flex;flex-direction:column;gap:8px;min-width:0}
+.match-details-panel .correct-score-column-title{background:#f0f2f4;color:#8b96a3;text-align:center;padding:9px 3px;font-size:13px;font-weight:750}
+.match-details-panel .correct-score-column .market{min-height:54px;padding:10px 8px;font-size:14px}
+.match-details-panel .correct-score-column .market small{font-size:14px}
+.match-details-panel .correct-score-column .market strong{font-size:16px}
+.match-details-panel .market-group h4{font-size:18px}
+.match-details-panel .market-group h4:before{content:'▾';color:#52b96d}
+.match-details-panel .market-primary-tabs button.active{background:#163a5f;color:#fff}
+.match-details-panel .market-category-tabs button.active{color:#245b8d;border-bottom-color:#398e50}
+@media(max-width:420px){.match-details-panel .total-goals-grid .market{min-height:58px;padding:9px 7px}.match-details-panel .total-goals-grid .market small{font-size:12px}.match-details-panel .total-goals-grid .market strong{font-size:16px}.match-details-panel .correct-score-columns{gap:5px}.match-details-panel .correct-score-column{gap:5px}.match-details-panel .correct-score-column-title{font-size:11px}.match-details-panel .correct-score-column .market{min-height:48px;padding:7px 5px;gap:4px}.match-details-panel .correct-score-column .market small{font-size:11px}.match-details-panel .correct-score-column .market strong{font-size:13px}}
+
 </style>
 
 <style id="blustake-api-odds-layout">
