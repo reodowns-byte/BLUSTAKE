@@ -10,8 +10,8 @@ export default async function handler(req, res) {
   const date = String(req.query.date || "").trim();
   const status = String(req.query.status || "").toLowerCase();
   const page = Math.max(1, Math.min(20, Number(req.query.page) || 1));
-  if (type === "details" && !/^\d+$/.test(id)) return res.status(400).json({ error: "A numeric fixture id is required" });
-  if (type !== "fixtures" && type !== "details") return res.status(400).json({ error: "type must be fixtures or details" });
+  if ((type === "details" || type === "odds") && !/^\d+$/.test(id)) return res.status(400).json({ error: "A numeric fixture id is required" });
+  if (type !== "fixtures" && type !== "details" && type !== "odds") return res.status(400).json({ error: "type must be fixtures, details or odds" });
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: "date must use YYYY-MM-DD format" });
 
   const base = "https://api.5dollarfootballapi.com/v1";
@@ -74,6 +74,12 @@ export default async function handler(req, res) {
   };
 
   try {
+    if (type === "odds") {
+      const oddsData = await request(`/fixtures/${encodeURIComponent(id)}/odds`);
+      const markets = makeMarkets({}, oddsData);
+      res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
+      return res.status(200).json({ markets, source: "5DollarFootballAPI" });
+    }
     if (type === "fixtures") {
       let path = "/fixtures?per_page=100&page=" + page;
       if (status === "live") path = "/fixtures?status=live&per_page=500&page=1";
@@ -88,7 +94,7 @@ export default async function handler(req, res) {
     }
     const [fixtureData, oddsData] = await Promise.all([
       request(`/fixtures/${encodeURIComponent(id)}`),
-      request(`/fixtures/${encodeURIComponent(id)}/odds?market=1x2`).catch(() => null)
+      request(`/fixtures/${encodeURIComponent(id)}/odds`).catch(() => null)
     ]);
     const raw = fixtureData.data || fixtureData.fixture || fixtureData;
     const normalized = toLegacyFixture(raw);
