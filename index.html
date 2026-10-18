@@ -1716,6 +1716,8 @@ const DEFAULT_MARKETS = [
 let fixtureCache=[];
 let apiFixtureCache=[];
 let apiOddsByFixture=new Map();
+let apiOddsCacheTime=0;
+let apiLiveOddsCacheTime=0;
 let activeFixtureFilter="ALL";
 let fixtureSearchQuery="";
 function localDateKey(value){const d=new Date(value);if(!Number.isFinite(d.getTime()))return "";return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;}
@@ -1724,16 +1726,22 @@ function apiFixtureStatus(f){const s=String(f?.fixture?.status?.short||"").toUpp
 function apiFixtureTime(f){const value=f?.fixture?.date;return value?new Date(value).toLocaleString(undefined,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Time TBC";}
 function apiMatchWinnerOdds(oddsRecord){
   if(!oddsRecord)return null;
-  const bookmakers=Array.isArray(oddsRecord.bookmakers)?oddsRecord.bookmakers:[];
-  const preferredNames=["Match Winner","Match Result","1X2","Fulltime Result","Full Time Result"];
+  // Pre-match /odds responses use bookmakers[].bets[].values[].odd.
+  // Live /odds/live responses use odds[].values[].odd and may omit bookmaker wrappers.
+  const markets=[];
+  for(const bookmaker of (Array.isArray(oddsRecord.bookmakers)?oddsRecord.bookmakers:[])){
+    for(const bet of (Array.isArray(bookmaker.bets)?bookmaker.bets:[]))markets.push({name:bet.name,values:bet.values,bookmaker:bookmaker.name||"Bookmaker"});
+  }
+  for(const market of (Array.isArray(oddsRecord.odds)?oddsRecord.odds:[]))markets.push({name:market.name,values:market.values,bookmaker:market.bookmaker||"Live odds"});
+  const preferredNames=["Match Winner","Match Result","1X2","Fulltime Result","Full Time Result","Winner"];
   for(const preferred of preferredNames){
-    for(const bookmaker of bookmakers){
-      const bet=(bookmaker.bets||[]).find(b=>String(b.name||"").trim().toLowerCase()===preferred.toLowerCase());
-      if(!bet)continue;
-      const values=bet.values||[];
+    for(const market of markets){
+      if(String(market.name||"").trim().toLowerCase()!==preferred.toLowerCase())continue;
+      const values=Array.isArray(market.values)?market.values:[];
       const findValue=(names)=>values.find(v=>names.includes(String(v.value||"").trim().toLowerCase()));
       const home=findValue(["home","1"]),draw=findValue(["draw","x"]),away=findValue(["away","2"]);
-      if(home&&draw&&away&&[home.odd,draw.odd,away.odd].every(x=>Number(x)>1))return {home:Number(home.odd),draw:Number(draw.odd),away:Number(away.odd),bookmaker:bookmaker.name||"Bookmaker"};
+      const price=v=>Number(v?.odd??v?.odds);
+      if(home&&draw&&away&&[price(home),price(draw),price(away)].every(x=>Number.isFinite(x)&&x>1))return {home:price(home),draw:price(draw),away:price(away),bookmaker:market.bookmaker||"Bookmaker"};
     }
   }
   return null;
@@ -1752,7 +1760,41 @@ async function loadFixtures(){
   /* Start the API calls immediately so football data loads alongside the Supabase match query. */
   const today=dateKeyOffset(0),tomorrow=dateKeyOffset(1);
   const apiFixturesPromise=(async()=>{const urls=["/api/fixtures?live=all",`/api/fixtures?date=${today}`,`/api/fixtures?date=${tomorrow}`];const responses=await Promise.all(urls.map(async url=>{const r=await fetch(url,{headers:{Accept:"application/json"}});if(!r.ok)throw new Error(`Fixture API request failed (${r.status})`);const data=await r.json();if(data.error)throw new Error(data.error);return Array.isArray(data.response)?data.response:[];}));const unique=new Map();responses.flat().forEach(f=>{if(f?.fixture?.id!=null)unique.set(String(f.fixture.id),f);});return [...unique.values()];})();
-  const apiOddsPromise=(async()=>{const urls=[`/api/odds?date=${today}&page=1`,`/api/odds?date=${tomorrow}&page=1`,`/api/odds?live=all`];const responses=await Promise.all(urls.map(async url=>{try{const r=await fetch(url,{headers:{Accept:"application/json"}});if(!r.ok)return [];const data=await r.json();if(data.error)return [];return Array.isArray(data.response)?data.response:[];}catch(_){return [];}}));const byFixture=new Map();responses.flat().forEach(item=>{const id=item?.fixture?.id;if(id!=null)byFixture.set(String(id),item);});return byFixture;})();
+  const apiOddsPromise=(async()=>{
+    const now=Date.now();
+    // Keep pre-match odds cached for 3 minutes and live odds for 30 seconds so the
+    // 15-second UI refresh does not repeatedly consume the provider's API quota.
+    let preMatchItems=[];
+    if(!window.__blustakePreOddsCache||now-(window.__blustakePreOddsCacheTime||0)>180000){
+      const fetchDatePages=async date=>{
+        try{
+          const firstResponse=await fetch(`/api/odds?date=${date}&page=1`,{headers:{Accept:"application/json"}});
+          if(!firstResponse.ok)return [];
+          const first=await firstResponse.json();if(first.error)return [];
+          const firstItems=Array.isArray(first.response)?first.response:[];
+          const totalPages=Math.min(10,Math.max(1,Number(first.paging?.total)||1));
+          if(totalPages===1)return firstItems;
+          const rest=await Promise.all(Array.from({length:totalPages-1},(_,i)=>i+2).map(async page=>{
+            try{const r=await fetch(`/api/odds?date=${date}&page=${page}`,{headers:{Accept:"application/json"}});if(!r.ok)return [];const d=await r.json();return !d.error&&Array.isArray(d.response)?d.response:[];}catch(_){return [];}
+          }));
+          return firstItems.concat(...rest);
+        }catch(_){return [];}
+      };
+      const [todayItems,tomorrowItems]=await Promise.all([fetchDatePages(today),fetchDatePages(tomorrow)]);
+      window.__blustakePreOddsCache=todayItems.concat(tomorrowItems);
+      window.__blustakePreOddsCacheTime=now;
+    }
+    preMatchItems=window.__blustakePreOddsCache||[];
+    let liveItems=[];
+    if(!window.__blustakeLiveOddsCache||now-(window.__blustakeLiveOddsCacheTime||0)>30000){
+      try{const r=await fetch(`/api/odds?live=all`,{headers:{Accept:"application/json"}});if(r.ok){const d=await r.json();if(!d.error&&Array.isArray(d.response))window.__blustakeLiveOddsCache=d.response;}}catch(_){}
+      window.__blustakeLiveOddsCacheTime=now;
+    }
+    liveItems=window.__blustakeLiveOddsCache||[];
+    const byFixture=new Map();
+    preMatchItems.concat(liveItems).forEach(item=>{const id=item?.fixture?.id;if(id!=null)byFixture.set(String(id),item);});
+    return byFixture;
+  })();
   let manualError=null;
   try{
     if(supabaseClient){
