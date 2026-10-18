@@ -1746,7 +1746,7 @@ function apiMatchWinnerOdds(oddsRecord){
   }
   return null;
 }
-function renderApiFixtureCard(f){const fixture=f.fixture||{},league=f.league||{},teams=f.teams||{},goals=f.goals||{},status=apiFixtureStatus(f),live=status==="LIVE",finished=status==="FINISHED";const home=teams.home||{},away=teams.away||{},oddsRecord=apiOddsByFixture.get(String(fixture.id)),odds=apiMatchWinnerOdds(oddsRecord);const score=goals.home!==null&&goals.home!==undefined&&goals.away!==null&&goals.away!==undefined?`${goals.home} — ${goals.away}`:(live?"0 — 0":"VS");const logo=(team)=>team.logo?`<img src="${escapeHtml(team.logo)}" alt="" loading="lazy" style="width:22px;height:22px;object-fit:contain;flex:0 0 22px">`:"";const statusText=live?`${escapeHtml(fixture.status?.long||"LIVE")}${fixture.status?.elapsed!=null?` · ${Number(fixture.status.elapsed)}′`:""}`:finished?escapeHtml(fixture.status?.long||"FINISHED"):"UPCOMING";const oddsHtml=odds?`<div class="compact-api-odds"><span class="compact-feed-label">${escapeHtml(odds.bookmaker)} · 1X2</span><div class="compact-api-odds-grid"><div class="compact-api-odd"><small>Home</small><strong>${odds.home.toFixed(2)}</strong></div><div class="compact-api-odd"><small>Draw</small><strong>${odds.draw.toFixed(2)}</strong></div><div class="compact-api-odd"><small>Away</small><strong>${odds.away.toFixed(2)}</strong></div></div></div>`:`<div class="compact-api-odds"><span class="compact-feed-label">OFFICIAL FIXTURE</span><span class="compact-odds-unavailable">${finished?"Match finished":"Odds not available"}</span></div>`;return `<article class="match api-fixture-card compact-fixture" data-api-fixture="1" data-api-status="${status}" data-api-date="${escapeHtml(localDateKey(fixture.date))}" data-search-text="${escapeHtml(`${league.name||"Football"} ${league.country||""} ${home.name||"Home"} ${away.name||"Away"}`.toLowerCase())}"><div class="league"><span>${escapeHtml(league.name||"Football")}${league.country?` · ${escapeHtml(league.country)}`:""}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${statusText}</span></div><div class="match-body compact-match-body"><div class="compact-match-meta"><span>${live?"LIVE SCORE":finished?"FINISHED":"KICK-OFF"}</span><span>${apiFixtureTime(f)}</span></div><div class="compact-match-main"><div class="compact-team-list"><div class="compact-team">${logo(home)}<span>${escapeHtml(home.name||"Home team")}</span><strong>${goals.home??"—"}</strong></div><div class="compact-team">${logo(away)}<span>${escapeHtml(away.name||"Away team")}</span><strong>${goals.away??"—"}</strong></div></div>${oddsHtml}</div></div></article>`;}
+function renderApiFixtureCard(f){const fixture=f.fixture||{},league=f.league||{},teams=f.teams||{},goals=f.goals||{},status=apiFixtureStatus(f),live=status==="LIVE",finished=status==="FINISHED";const home=teams.home||{},away=teams.away||{},oddsRecord=apiOddsByFixture.get(String(fixture.id)),odds=apiMatchWinnerOdds(oddsRecord);const score=goals.home!==null&&goals.home!==undefined&&goals.away!==null&&goals.away!==undefined?`${goals.home} — ${goals.away}`:(live?"0 — 0":"VS");const logo=(team)=>team.logo?`<img src="${escapeHtml(team.logo)}" alt="" loading="lazy" style="width:22px;height:22px;object-fit:contain;flex:0 0 22px">`:"";const statusText=live?`${escapeHtml(fixture.status?.long||"LIVE")}${fixture.status?.elapsed!=null?` · ${Number(fixture.status.elapsed)}′`:""}`:finished?escapeHtml(fixture.status?.long||"FINISHED"):"UPCOMING";const oddsHtml=odds?`<div class="compact-api-odds"><span class="compact-feed-label">${escapeHtml(odds.bookmaker)} · 1X2</span><div class="compact-api-odds-grid"><div class="compact-api-odd"><small>Home</small><strong>${odds.home.toFixed(2)}</strong></div><div class="compact-api-odd"><small>Draw</small><strong>${odds.draw.toFixed(2)}</strong></div><div class="compact-api-odd"><small>Away</small><strong>${odds.away.toFixed(2)}</strong></div></div></div>`:`<div class="compact-api-odds"><span class="compact-feed-label">OFFICIAL FIXTURE</span><span class="compact-odds-unavailable">${finished?"Match finished":"Odds not available"}</span></div>`;return `<article class="match api-fixture-card compact-fixture" data-api-fixture="1" data-api-fixture-id="${escapeHtml(fixture.id)}" data-api-status="${status}" data-api-date="${escapeHtml(localDateKey(fixture.date))}" data-search-text="${escapeHtml(`${league.name||"Football"} ${league.country||""} ${home.name||"Home"} ${away.name||"Away"}`.toLowerCase())}"><div class="league"><span>${escapeHtml(league.name||"Football")}${league.country?` · ${escapeHtml(league.country)}`:""}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${statusText}</span></div><div class="match-body compact-match-body"><div class="compact-match-meta"><span>${live?"LIVE SCORE":finished?"FINISHED":"KICK-OFF"}</span><span>${apiFixtureTime(f)}</span></div><div class="compact-match-main"><div class="compact-team-list"><div class="compact-team">${logo(home)}<span>${escapeHtml(home.name||"Home team")}</span><strong>${goals.home??"—"}</strong></div><div class="compact-team">${logo(away)}<span>${escapeHtml(away.name||"Away team")}</span><strong>${goals.away??"—"}</strong></div></div>${oddsHtml}</div><div class="match-tap-hint">Tap match to view details and markets</div></div></article>`;}
 
 function applyFixtureFilters(){const q=fixtureSearchQuery;const today=dateKeyOffset(0),tomorrow=dateKeyOffset(1);document.querySelectorAll("#matches .match").forEach(card=>{const isApi=card.hasAttribute("data-api-fixture");let show=true;if(isApi){const status=card.dataset.apiStatus,date=card.dataset.apiDate;if(activeFixtureFilter==="LIVE")show=status==="LIVE";else if(activeFixtureFilter==="TODAY")show=date===today;else if(activeFixtureFilter==="TOMORROW")show=date===tomorrow;else if(activeFixtureFilter==="FINISHED")show=status==="FINISHED";else show=true;}else{const text=card.textContent.toLowerCase();if(activeFixtureFilter==="LIVE")show=/\bLIVE\b|\bHT\b|first_half|second_half/i.test(text);else if(activeFixtureFilter==="FINISHED")show=/\bFT\b|FINISHED|full_time/i.test(text);else if(activeFixtureFilter==="TODAY")show=localDateKey(card.querySelector(".match-top span:last-child")?.textContent||"")===today||card.textContent.toLowerCase().includes("live match");else if(activeFixtureFilter==="TOMORROW")show=false;}if(q&&!card.textContent.toLowerCase().includes(q))show=false;card.classList.toggle("hidden",!show);});const count=[...document.querySelectorAll("#matches .match")].filter(x=>!x.classList.contains("hidden")).length;const countEl=document.querySelector(".events-count");if(countEl)countEl.textContent=`${count} fixtures`;}
 
@@ -1759,42 +1759,16 @@ async function loadFixtures(){
   const matchesEl=$("matches");if(!matchesEl)return;
   /* Start the API calls immediately so football data loads alongside the Supabase match query. */
   const today=dateKeyOffset(0),tomorrow=dateKeyOffset(1);
-  const apiFixturesPromise=(async()=>{const urls=["/api/fixtures?live=all",`/api/fixtures?date=${today}`,`/api/fixtures?date=${tomorrow}`];const responses=await Promise.all(urls.map(async url=>{const r=await fetch(url,{headers:{Accept:"application/json"}});if(!r.ok)throw new Error(`Fixture API request failed (${r.status})`);const data=await r.json();if(data.error)throw new Error(data.error);return Array.isArray(data.response)?data.response:[];}));const unique=new Map();responses.flat().forEach(f=>{if(f?.fixture?.id!=null)unique.set(String(f.fixture.id),f);});return [...unique.values()];})();
-  const apiOddsPromise=(async()=>{
+  const apiFixturesPromise=(async()=>{
     const now=Date.now();
-    // Keep pre-match odds cached for 3 minutes and live odds for 30 seconds so the
-    // 15-second UI refresh does not repeatedly consume the provider's API quota.
-    let preMatchItems=[];
-    if(!window.__blustakePreOddsCache||now-(window.__blustakePreOddsCacheTime||0)>180000){
-      const fetchDatePages=async date=>{
-        try{
-          const firstResponse=await fetch(`/api/odds?date=${date}&page=1`,{headers:{Accept:"application/json"}});
-          if(!firstResponse.ok)return [];
-          const first=await firstResponse.json();if(first.error)return [];
-          const firstItems=Array.isArray(first.response)?first.response:[];
-          const totalPages=Math.min(10,Math.max(1,Number(first.paging?.total)||1));
-          if(totalPages===1)return firstItems;
-          const rest=await Promise.all(Array.from({length:totalPages-1},(_,i)=>i+2).map(async page=>{
-            try{const r=await fetch(`/api/odds?date=${date}&page=${page}`,{headers:{Accept:"application/json"}});if(!r.ok)return [];const d=await r.json();return !d.error&&Array.isArray(d.response)?d.response:[];}catch(_){return [];}
-          }));
-          return firstItems.concat(...rest);
-        }catch(_){return [];}
-      };
-      const [todayItems,tomorrowItems]=await Promise.all([fetchDatePages(today),fetchDatePages(tomorrow)]);
-      window.__blustakePreOddsCache=todayItems.concat(tomorrowItems);
-      window.__blustakePreOddsCacheTime=now;
-    }
-    preMatchItems=window.__blustakePreOddsCache||[];
-    let liveItems=[];
-    if(!window.__blustakeLiveOddsCache||now-(window.__blustakeLiveOddsCacheTime||0)>30000){
-      try{const r=await fetch(`/api/odds?live=all`,{headers:{Accept:"application/json"}});if(r.ok){const d=await r.json();if(!d.error&&Array.isArray(d.response))window.__blustakeLiveOddsCache=d.response;}}catch(_){}
-      window.__blustakeLiveOddsCacheTime=now;
-    }
-    liveItems=window.__blustakeLiveOddsCache||[];
-    const byFixture=new Map();
-    preMatchItems.concat(liveItems).forEach(item=>{const id=item?.fixture?.id;if(id!=null)byFixture.set(String(id),item);});
-    return byFixture;
+    if(window.__blustakeFiveDollarFixtures && now-(window.__blustakeFiveDollarFixturesAt||0)<60000) return window.__blustakeFiveDollarFixtures;
+    const urls=["/api/football?type=fixtures&status=live",`/api/football?type=fixtures&date=${today}`,`/api/football?type=fixtures&date=${tomorrow}`];
+    const responses=await Promise.all(urls.map(async url=>{const r=await fetch(url,{headers:{Accept:"application/json"}});const data=await r.json().catch(()=>({}));if(!r.ok||data.error)throw new Error(data.error||`Football API request failed (${r.status})`);return Array.isArray(data.response)?data.response:[]}));
+    const unique=new Map();responses.flat().forEach(f=>{if(f?.fixture?.id!=null)unique.set(String(f.fixture.id),f);});
+    window.__blustakeFiveDollarFixtures=[...unique.values()];window.__blustakeFiveDollarFixturesAt=now;return window.__blustakeFiveDollarFixtures;
   })();
+  // Odds are fetched only when a visitor opens a fixture's match centre.
+  const apiOddsPromise=Promise.resolve(new Map());
   let manualError=null;
   try{
     if(supabaseClient){
@@ -1818,6 +1792,20 @@ function closeMatchDetails(){$("matchDetailsModal").classList.remove("open");doc
 document.addEventListener("click",e=>{if(e.target.closest("#closeMatchDetails")){e.preventDefault();closeMatchDetails();}});
 $("matchDetailsModal")?.addEventListener("click",e=>{if(e.target.id==="matchDetailsModal")closeMatchDetails();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMatchDetails();});
+async function openOfficialFixtureDetails(card){
+ const id=String(card?.dataset?.apiFixtureId||"");if(!/^\d+$/.test(id))return;
+ const modal=$("matchDetailsModal"),content=$("matchDetailsContent");if(!modal||!content)return;
+ const title=card.querySelector(".compact-team-list")?.innerText||"Football match";
+ content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Official match markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="notice">Loading fixture details and available markets for ${escapeHtml(title.replace(/\n/g," vs "))}…</div>`;
+ modal.classList.add("open");document.body.style.overflow="hidden";
+ try{
+  const response=await fetch(`/api/football?type=details&id=${encodeURIComponent(id)}`,{headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok||payload.error)throw new Error(payload.error||`Request failed (${response.status})`);
+  const f=payload.response||{},fixture=f.fixture||{},league=f.league||{},teams=f.teams||{},goals=f.goals||{},markets=Array.isArray(f.markets)?f.markets:[];
+  const marketHtml=markets.length?markets.map(m=>`<section class="market-group"><h4>${escapeHtml(m.name||"Market")}</h4><div class="market-grid">${(m.values||[]).map(v=>`<div class="market" style="cursor:default"><small>${escapeHtml(v.value||"Selection")}</small>${Number(v.odd).toFixed(2)}</div>`).join("")}</div></section>`).join(""):'<div class="notice">The provider did not return available odds for this fixture. Try another match or check back closer to kick-off.</div>';
+  content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="selection"><div><strong>${escapeHtml(teams.home?.name||"Home")} vs ${escapeHtml(teams.away?.name||"Away")}</strong><div class="muted">${escapeHtml(league.name||"Football")} · ${escapeHtml(fixture.status?.long||"Fixture")} · ${apiFixtureTime(f)}</div></div><strong>${goals.home??"—"} : ${goals.away??"—"}</strong></div>${marketHtml}<div class="notice">Official-feed markets are for viewing/testing only and are not yet connected to BLUSTAKE's bet placement and settlement database.</div>`;
+ }catch(err){content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="notice">Could not load match markets: ${escapeHtml(err.message||"Please try again.")}</div>`;}
+}
+$("matches")?.addEventListener("click",e=>{const card=e.target.closest(".match[data-api-fixture-id]");if(card){e.preventDefault();openOfficialFixtureDetails(card);}});
 // One robust delegated market handler for dynamically-rendered cards and modal markets.
 document.addEventListener("click",function(e){
   const button=e.target.closest(".market[data-fixture-market]");
@@ -2120,6 +2108,7 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 (()=>{const overlay=document.getElementById("blustakeWinCup");if(!overlay)return;const close=()=>overlay.classList.remove("open");document.getElementById("bsCupClose").addEventListener("click",close);overlay.addEventListener("click",e=>{if(e.target===overlay)close()});document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});document.getElementById("bsCupDetails").addEventListener("click",()=>{close();const tab=document.getElementById("betHistoryTab");if(tab)tab.click();if(typeof setView==="function")setView("bets")});document.getElementById("bsCupShowOff").addEventListener("click",async()=>{const text="🏆 BLUSTAKE — YOU WON! Winning return: "+(document.getElementById("bsCupAmount")?.textContent||"");try{if(navigator.share)await navigator.share({title:"BLUSTAKE winning cup",text});else if(navigator.clipboard)await navigator.clipboard.writeText(text);else window.prompt("Copy your winning message",text)}catch(_){} });window.blustakeShowWinningCup=(amount)=>{document.getElementById("bsCupAmount").textContent="GH₵ "+Number(amount||0).toLocaleString("en-GH",{minimumFractionDigits:2,maximumFractionDigits:2});overlay.classList.add("open")};})();
 </script>
 <script>setInterval(()=>{try{if(currentUser&&supabaseClient&&typeof loadMyBets==="function")loadMyBets()}catch(_){ }},15000);</script>
+<footer style="text-align:center;padding:10px 12px;font-size:11px;color:#718096">Football data by <a href="https://5dollarfootballapi.com/" target="_blank" rel="noopener noreferrer">5DollarFootballAPI</a></footer>
 </body>
 </html>
 
