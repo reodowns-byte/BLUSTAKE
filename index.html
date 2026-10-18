@@ -1898,7 +1898,7 @@ async function loadFixtures(){
   document.documentElement.classList.remove("fixtures-loading");
   applyFixtureFilters();
 }
-function openMatchDetails(matchId){const match=fixtureCache.find(x=>x.id===matchId);if(!match)return;$("matchDetailsContent").innerHTML=renderFixtureCard(match,true);$("matchDetailsModal").classList.add("open");document.body.style.overflow="hidden";}
+function openMatchDetails(matchId){const match=fixtureCache.find(x=>x.id===matchId);if(!match)return;const content=$("matchDetailsContent");content.innerHTML=renderFixtureCard(match,true);const card=content.querySelector(".compact-fixture");if(card){const clock=fixtureClock(match);const status=clock.status==="scheduled"?"Scheduled":clock.status==="half_time"?"Half-time · 15-minute break":clock.status==="full_time"?"Full time":`${clock.label} · ${clock.minute}′`;const head=document.createElement("div");head.className="match-details-header";head.innerHTML='<strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button>';content.insertBefore(head,card);const info=document.createElement("div");info.className="manual-match-summary";info.innerHTML=`<div class="manual-match-teams"><strong>${escapeHtml(match.home_team)}</strong><b>${clock.status==="scheduled"?"—":fixtureScore(match,clock.minute).home} : ${clock.status==="scheduled"?"—":fixtureScore(match,clock.minute).away}</b><strong>${escapeHtml(match.away_team)}</strong></div><div class="manual-match-meta">${escapeHtml(match.competition||"Football")} · ${escapeHtml(status)}${clock.status==="scheduled"&&match.kickoff_at?" · "+escapeHtml(new Date(match.kickoff_at).toLocaleString()):""}</div>`;const body=card.querySelector(".compact-match-body");if(body){const meta=body.querySelector(".compact-match-meta");if(meta)meta.remove();const main=body.querySelector(".compact-match-main");if(main)main.insertAdjacentElement("beforebegin",info);}}$("matchDetailsModal").classList.add("open");document.body.style.overflow="hidden";}
 function closeMatchDetails(){$("matchDetailsModal").classList.remove("open");document.body.style.overflow="";}
 document.addEventListener("click",e=>{if(e.target.closest("#closeMatchDetails")){e.preventDefault();closeMatchDetails();}});
 $("matchDetailsModal")?.addEventListener("click",e=>{if(e.target.id==="matchDetailsModal")closeMatchDetails();});
@@ -2356,6 +2356,28 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 .match-details-panel .market-category-tabs button.active{color:#245b8d;border-bottom-color:#398e50}
 @media(max-width:420px){.match-details-panel .total-goals-grid .market{min-height:58px;padding:9px 7px}.match-details-panel .total-goals-grid .market small{font-size:12px}.match-details-panel .total-goals-grid .market strong{font-size:16px}.match-details-panel .correct-score-columns{gap:5px}.match-details-panel .correct-score-column{gap:5px}.match-details-panel .correct-score-column-title{font-size:11px}.match-details-panel .correct-score-column .market{min-height:48px;padding:7px 5px;gap:4px}.match-details-panel .correct-score-column .market small{font-size:11px}.match-details-panel .correct-score-column .market strong{font-size:13px}}
 
+
+/* Fix admin-created match details: shared modal header, readable score row, and horizontal odds */
+.match-details-panel #matchDetailsContent>.match-details-header{display:flex!important;position:sticky;top:0;z-index:8;background:#06345a;color:#fff;padding:16px 18px;align-items:center;justify-content:space-between;gap:12px}
+.match-details-panel #matchDetailsContent>.match-details-header strong{font-size:17px}
+.match-details-panel #matchDetailsContent>.match-details-header button{background:#ffffff20;color:#fff;border-radius:9px;padding:9px 12px;font-weight:900;white-space:nowrap}
+.match-details-panel #matchDetailsContent>.compact-fixture>.league{display:none!important}
+.match-details-panel #matchDetailsContent .compact-match-body{padding:0 14px 22px!important;background:#fbfcfd}
+.match-details-panel #matchDetailsContent .manual-match-summary{padding:22px 8px 18px;background:#fff;border-bottom:1px solid #e3e8ed}
+.match-details-panel #matchDetailsContent .manual-match-teams{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;text-align:center;color:#303744}
+.match-details-panel #matchDetailsContent .manual-match-teams strong{font-size:17px;overflow-wrap:anywhere}
+.match-details-panel #matchDetailsContent .manual-match-teams b{font-size:25px;font-weight:950;white-space:nowrap;color:#263a4d}
+.match-details-panel #matchDetailsContent .manual-match-meta{text-align:center;color:#718497;font-size:13px;margin-top:10px}
+.match-details-panel #matchDetailsContent .compact-match-main{display:flex!important;flex-direction:column!important;gap:12px!important;align-items:stretch!important;padding-top:12px}
+.match-details-panel #matchDetailsContent .compact-team-list{display:none!important}
+.match-details-panel #matchDetailsContent .compact-manual-odds{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;width:100%!important}
+.match-details-panel #matchDetailsContent .compact-manual-odds .compact-odd{min-height:62px!important;padding:11px 8px!important;border:0!important;border-radius:4px!important;background:#dcebe0!important;color:#2f6c3a!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:6px!important;font-size:17px!important}
+.match-details-panel #matchDetailsContent .compact-manual-odds .compact-odd small{font-size:13px!important;color:#2f6c3a!important;text-align:left!important}
+.match-details-panel #matchDetailsContent .compact-manual-odds .compact-odd.selected{background:#245b8d!important;color:#fff!important}
+.match-details-panel #matchDetailsContent .compact-manual-odds .compact-odd.selected small{color:#fff!important}
+.match-details-panel #matchDetailsContent .tracker-launch{width:calc(100% - 16px);margin:14px 8px 4px}
+.match-details-panel #matchDetailsContent .fixture-markets{padding:0 8px}
+@media(max-width:420px){.match-details-panel #matchDetailsContent .manual-match-teams strong{font-size:14px}.match-details-panel #matchDetailsContent .manual-match-teams b{font-size:21px}.match-details-panel #matchDetailsContent .compact-manual-odds .compact-odd{min-height:56px!important;padding:9px 7px!important;font-size:14px!important}.match-details-panel #matchDetailsContent .compact-manual-odds .compact-odd small{font-size:11px!important}}
 </style>
 
 <style id="blustake-api-odds-layout">
