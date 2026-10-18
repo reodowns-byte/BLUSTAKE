@@ -574,6 +574,33 @@ html.fixtures-loading #matches,
 html.fixtures-loading footer { display:none !important; }
 </style>
 <script>document.documentElement.classList.add('fixtures-loading');</script>
+
+<style id="blustake-withdrawal-reference-style">
+.withdrawal-page{max-width:760px;margin:0 auto;padding:18px 20px 34px;color:#1d3145;background:#f3f7fb;min-height:calc(100vh - 160px);box-sizing:border-box}
+.withdrawal-page-header{display:flex;align-items:center;gap:12px;padding:4px 0 16px;border-bottom:1px solid #d9e4ef}
+.withdrawal-page-header h1{font-size:22px;font-weight:800;color:#145b91;margin:0;flex:1}
+.withdrawal-back{width:48px;height:48px;border:1px solid #d7e2ed;border-radius:50%;background:#fff;color:#145b91;font-size:30px;line-height:1;cursor:pointer}
+.withdrawal-balance-pill{display:flex;align-items:center;gap:8px;border-radius:28px;padding:12px 15px;background:#e3f0fa;border:1px solid #b8d2e7;color:#145b91;font-size:14px;white-space:nowrap}
+.withdrawal-tabs{display:flex;gap:6px;padding:8px;background:#eaf1f7;border:1px solid #d5e1ec;border-radius:22px;margin:16px 0 30px}
+.withdrawal-tabs button{flex:1;min-height:52px;border:0;border-radius:15px;background:transparent;color:#65758a;font-size:16px;font-weight:800}
+.withdrawal-tabs button.active{background:#17679e;color:#fff;box-shadow:0 3px 10px #145b9120}
+.withdrawal-content h2{font-size:30px;line-height:1.2;color:#173d61;margin:0 0 8px;font-weight:850}
+.withdrawal-subtitle{margin:0 0 20px;color:#758398;font-size:16px;font-weight:600}
+.withdrawal-amount-line{display:flex;align-items:center;gap:12px;margin:10px 0 22px;color:#145b91;font-size:30px;font-weight:850}
+.withdrawal-amount-line input{width:100%;min-width:0;border:0;background:transparent;color:#173d61;font-size:44px;font-weight:850;text-align:right;outline:none}
+.withdrawal-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0 26px}
+.withdrawal-presets button{min-height:54px;border:1px solid #bfd3e5;border-radius:28px;background:#fff;color:#173d61;font-size:17px;font-weight:800}
+.withdrawal-presets button.active{background:#17679e;border-color:#17679e;color:#fff}
+.withdrawal-receive{text-align:center;color:#6f8095;font-size:16px;font-weight:650;margin:0 0 30px}
+.withdrawal-receive strong{color:#145b91}
+.withdrawal-field-label{display:block;color:#65758a;font-size:15px;font-weight:750;margin:22px 0 10px}
+.withdrawal-select,.withdrawal-phone{width:100%;height:64px;box-sizing:border-box;border:1.5px solid #b9d0e4;border-radius:22px;background:#fff;color:#1d3145;padding:0 18px;font-size:17px;font-weight:650;outline-color:#17679e}
+.withdrawal-submit{width:100%;min-height:68px;border:0;border-radius:36px;background:#8ab0cb;color:#fff;font-size:19px;font-weight:850;margin:26px 0 12px;cursor:not-allowed;opacity:1}
+.withdrawal-status{color:#60758a;font-size:14px;line-height:1.55;margin:8px 0 18px}
+.withdrawal-open-wallet{border:0;border-radius:16px;padding:15px 20px;background:#e4f0f8;color:#145b91;font-size:16px;font-weight:800}
+@media(max-width:420px){.withdrawal-page{padding:14px 16px 30px}.withdrawal-page-header h1{font-size:20px}.withdrawal-balance-pill{font-size:12px;padding:10px}.withdrawal-presets{gap:7px}.withdrawal-presets button{font-size:15px;min-height:50px}.withdrawal-amount-line input{font-size:38px}}
+</style>
+
 </head>
 <body class="show-home-hero">
 <header class="header">
@@ -811,12 +838,42 @@ html.fixtures-loading footer { display:none !important; }
   </section>
 
   <section id="view-withdrawal" class="view hidden">
-    <div class="section">
-      <div class="section-head"><h2>Withdrawal</h2><span class="pill">Available</span></div>
-      <p class="notice">Welcome to the Withdrawal section. You can view this page, but sending money out is not enabled yet. Withdrawals will remain unavailable until a verified payout process is connected.</p>
-      <button type="button" class="btn secondary" id="openWalletFromWithdrawal">Open wallet / deposit</button>
-      <button id="withdrawButton" class="btn full" disabled aria-disabled="true" title="Withdrawals are not enabled yet">Withdrawals not enabled yet</button>
-      <p id="withdrawStatus" class="status" role="status" aria-live="polite">Your balance cannot be withdrawn from this page at this time.</p>
+    <div class="withdrawal-page">
+      <header class="withdrawal-page-header">
+        <button type="button" class="withdrawal-back" id="withdrawalBack" aria-label="Back to profile">‹</button>
+        <h1>Withdraw</h1>
+        <div class="withdrawal-balance-pill">▣ <strong id="withdrawalBalance">GH₵ —</strong></div>
+      </header>
+      <div class="withdrawal-tabs" role="group" aria-label="Wallet actions">
+        <button type="button" id="withdrawalDepositTab">↙ &nbsp; Deposit</button>
+        <button type="button" class="active" aria-current="page">↗ &nbsp; Withdraw</button>
+      </div>
+      <div class="withdrawal-content">
+        <h2>How much?</h2>
+        <p class="withdrawal-subtitle">Available <span id="withdrawalAvailable">GH₵ —</span></p>
+        <div class="withdrawal-amount-line">
+          <span>GH₵</span>
+          <input id="withdrawAmount" type="number" inputmode="decimal" min="0" step="1" value="0" aria-label="Withdrawal amount in Ghana cedis">
+        </div>
+        <div class="withdrawal-presets" aria-label="Choose withdrawal amount">
+          <button type="button" data-withdraw-amount="300">300</button>
+          <button type="button" data-withdraw-amount="500">500</button>
+          <button type="button" data-withdraw-amount="1000">1,000</button>
+          <button type="button" data-withdraw-amount="2000">2,000</button>
+        </div>
+        <p class="withdrawal-receive">You receive <strong id="withdrawalReceive">GH₵0.00</strong></p>
+        <label class="withdrawal-field-label" for="withdrawalMethod">Payout Method</label>
+        <select id="withdrawalMethod" class="withdrawal-select">
+          <option>MTN MoMo</option>
+          <option>Telecel Cash</option>
+          <option>AirtelTigo</option>
+        </select>
+        <label class="withdrawal-field-label" for="withdrawalPhone">Mobile Money Number</label>
+        <input id="withdrawalPhone" class="withdrawal-phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="Enter mobile money number" aria-label="Mobile Money Number">
+        <button type="button" id="withdrawButton" class="withdrawal-submit" disabled aria-disabled="true">Withdrawals not enabled yet</button>
+        <p id="withdrawStatus" class="withdrawal-status" role="status" aria-live="polite">The form is available to view, but payouts are not enabled. No money can be sent out.</p>
+        <button type="button" class="withdrawal-open-wallet" id="openWalletFromWithdrawal">Open wallet / deposit</button>
+      </div>
     </div>
   </section>
 
@@ -2157,6 +2214,24 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 (()=>{const overlay=document.getElementById("blustakeWinCup");if(!overlay)return;const close=()=>overlay.classList.remove("open");document.getElementById("bsCupClose").addEventListener("click",close);overlay.addEventListener("click",e=>{if(e.target===overlay)close()});document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});document.getElementById("bsCupDetails").addEventListener("click",()=>{close();const tab=document.getElementById("betHistoryTab");if(tab)tab.click();if(typeof setView==="function")setView("bets")});document.getElementById("bsCupShowOff").addEventListener("click",async()=>{const text="🏆 BLUSTAKE — YOU WON!";try{if(navigator.share)await navigator.share({title:"BLUSTAKE winning cup",text});else if(navigator.clipboard)await navigator.clipboard.writeText(text);else window.prompt("Copy your winning message",text)}catch(_){} });window.blustakeShowWinningCup=(_amount)=>{overlay.classList.add("open")};})();
 </script>
 <script>setInterval(()=>{try{if(currentUser&&supabaseClient&&typeof loadMyBets==="function")loadMyBets()}catch(_){ }},15000);</script>
+
+
+<script id="blustake-withdrawal-form-ui">
+(()=>{
+ const $=id=>document.getElementById(id);
+ const amount=$('withdrawAmount'), receive=$('withdrawalReceive');
+ const format=n=>'GH₵'+Number(n||0).toLocaleString('en-GH',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const syncBalance=()=>{const b=$('walletBalance')?.textContent||'GH₵ —';if($('withdrawalBalance'))$('withdrawalBalance').textContent=b;if($('withdrawalAvailable'))$('withdrawalAvailable').textContent=b;};
+ const syncAmount=()=>{if(receive)receive.textContent=format(Math.max(0,Number(amount?.value)||0));document.querySelectorAll('[data-withdraw-amount]').forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.withdrawAmount)===(Number(amount?.value)||0)));};
+ document.querySelectorAll('[data-withdraw-amount]').forEach(btn=>btn.addEventListener('click',()=>{if(amount)amount.value=btn.dataset.withdrawAmount;syncAmount()}));
+ amount?.addEventListener('input',syncAmount);
+ $('withdrawalDepositTab')?.addEventListener('click',()=>setView('wallet'));
+ $('withdrawalBack')?.addEventListener('click',()=>setView('profile'));
+ $('openWalletFromWithdrawal')?.addEventListener('click',()=>setView('wallet'));
+ const observer=new MutationObserver(syncBalance);if($('walletBalance'))observer.observe($('walletBalance'),{childList:true,subtree:true,characterData:true});
+ syncBalance();syncAmount();
+})();
+</script>
 
 </body>
 </html>
