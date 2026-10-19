@@ -601,6 +601,15 @@ html.fixtures-loading footer { display:none !important; }
 @media(max-width:420px){.withdrawal-page{padding:14px 16px 30px}.withdrawal-page-header h1{font-size:20px}.withdrawal-balance-pill{font-size:12px;padding:10px}.withdrawal-presets{gap:7px}.withdrawal-presets button{font-size:15px;min-height:50px}.withdrawal-amount-line input{font-size:38px}}
 </style>
 
+
+<style id="blustake-winning-cup-final-visual-fix">
+/* Keep the site visible behind the celebration; remove only the trophy image's black rectangle. */
+#blustakeWinCup, #blustakeWinCup.open { background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+#blustakeWinCup .bs-cup-panel { background: transparent !important; box-shadow: none !important; }
+#blustakeWinCup .bs-cup-art { background: transparent !important; mix-blend-mode: screen !important; }
+/* The winning amount line is intentionally not displayed. */
+#blustakeWinCup .bs-cup-return { display: none !important; }
+</style>
 </head>
 <body class="show-home-hero">
 <header class="header">
