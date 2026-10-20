@@ -1852,10 +1852,19 @@ async function loadFixtures(){
     const unique=new Map();responses.flat().forEach(f=>{if(f?.fixture?.id!=null)unique.set(String(f.fixture.id),f);});
     window.__blustakeFiveDollarFixtures=[...unique.values()];window.__blustakeFiveDollarFixturesAt=now;return window.__blustakeFiveDollarFixtures;
   })();
-  // Do not bulk-fetch odds for dozens of fixtures on every refresh. The provider
-  // allows only 10 requests/minute, so detailed markets are requested on demand
-  // when the user opens one fixture (openOfficialFixtureDetails below).
-  const apiOddsPromise=Promise.resolve(new Map());
+  // Load match-winner odds before rendering the cards. Cache locally for 10 minutes and limit concurrency to protect the free API quota.
+  const apiOddsPromise=(async()=>{
+    const result=new Map();
+    const cacheKey="blustake5dollarOddsCacheV1";let saved={};try{saved=JSON.parse(localStorage.getItem(cacheKey)||"{}")}catch(_){saved={}}
+    const now=Date.now();const pending=[];
+    for(const f of (await apiFixturesPromise).slice(0,40)){
+      const id=String(f?.fixture?.id||"");if(!id)continue;
+      const hit=saved[id];if(hit&&now-hit.at<10*60*1000){result.set(id,hit.value);continue;}
+      pending.push({id,f});
+    }
+    let cursor=0;const workers=Array.from({length:3},async()=>{while(cursor<pending.length){const item=pending[cursor++];try{const r=await fetch(`/api/football?type=odds&id=${encodeURIComponent(item.id)}`,{headers:{Accept:"application/json"}});const d=await r.json().catch(()=>({}));if(r.ok&&!d.error){const markets=Array.isArray(d.markets)?d.markets:[];const winner=markets.find(m=>/^(match winner|match result|1x2|full.?time result)$/i.test(String(m.name||"")));if(winner){const find=names=>(winner.values||[]).find(v=>names.includes(String(v.value||"").toLowerCase()));const h=find(["home","1"]),dr=find(["draw","x"]),a=find(["away","2"]);if(h&&dr&&a){const val={bookmakers:[{name:"Bet365",bets:[{name:"Match Winner",values:[{value:"Home",odd:h.odd},{value:"Draw",odd:dr.odd},{value:"Away",odd:a.odd}]}]}],markets};result.set(item.id,val);saved[item.id]={at:now,value:val};}}}}catch(err){console.warn("Could not load odds for fixture",item.id,err);}}});
+    await Promise.all(workers);try{localStorage.setItem(cacheKey,JSON.stringify(saved))}catch(_){}return result;
+  })();
   let manualError=null;
   try{
     if(supabaseClient){
@@ -1876,25 +1885,18 @@ async function loadFixtures(){
   applyFixtureFilters();
 }
 function openMatchDetails(matchId){const match=fixtureCache.find(x=>x.id===matchId);if(!match)return;$("matchDetailsContent").innerHTML=renderFixtureCard(match,true);$("matchDetailsModal").classList.add("open");document.body.style.overflow="hidden";}
-function closeMatchDetails(){officialDetailsRequestToken++;officialDetailsLoadingId="";$("matchDetailsModal").classList.remove("open");document.body.style.overflow="";}
+function closeMatchDetails(){$("matchDetailsModal").classList.remove("open");document.body.style.overflow="";}
 document.addEventListener("click",e=>{if(e.target.closest("#closeMatchDetails")){e.preventDefault();closeMatchDetails();}});
 $("matchDetailsModal")?.addEventListener("click",e=>{if(e.target.id==="matchDetailsModal")closeMatchDetails();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMatchDetails();});
-let officialDetailsRequestToken=0;
-let officialDetailsLoadingId="";
 async function openOfficialFixtureDetails(card){
  const id=String(card?.dataset?.apiFixtureId||"");if(!/^\d+$/.test(id))return;
  const modal=$("matchDetailsModal"),content=$("matchDetailsContent");if(!modal||!content)return;
- // Ignore repeated taps on the same fixture while its market request is in flight.
- if(officialDetailsLoadingId===id && modal.classList.contains("open"))return;
- officialDetailsLoadingId=id;const requestToken=++officialDetailsRequestToken;
  const title=card.querySelector(".compact-team-list")?.innerText||"Football match";
- content.replaceChildren();
  content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Official match markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="notice">Loading fixture details and available markets for ${escapeHtml(title.replace(/\n/g," vs "))}…</div>`;
  modal.classList.add("open");document.body.style.overflow="hidden";
  try{
   const response=await fetch(`/api/football?type=details&id=${encodeURIComponent(id)}`,{headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok||payload.error)throw new Error(payload.error||`Request failed (${response.status})`);
-  if(requestToken!==officialDetailsRequestToken)return;
   const f=payload.response||{},fixture=f.fixture||{},league=f.league||{},teams=f.teams||{},goals=f.goals||{},markets=Array.isArray(f.markets)?f.markets:[];
   const winner=markets.find(m=>/^(match winner|match result|1x2|full.?time result)$/i.test(String(m.name||"")));
   if(winner && Array.isArray(winner.values)){
@@ -1909,8 +1911,7 @@ async function openOfficialFixtureDetails(card){
   const fixtureLabel=(teams.home?.name||"Home")+" vs "+(teams.away?.name||"Away");
   const marketHtml=markets.length?markets.map(m=>`<section class="market-group"><h4>${escapeHtml(m.name||"Market")}</h4><div class="market-grid">${(m.values||[]).map(v=>Number(v.odd)>1?`<button type="button" class="market api-modal-market" data-external-fixture="${escapeHtml(id)}" data-external-match="${escapeHtml(fixtureLabel)}" data-market="${escapeHtml((m.name||"Market")+" · "+(v.value||"Selection"))}" data-odds="${Number(v.odd)}"><small>${escapeHtml(v.value||"Selection")}</small>${Number(v.odd).toFixed(2)}</button>`:"").join("")}</div></section>`).join(""):'<div class="notice">The provider did not return available odds for this fixture. Try another match or check back closer to kick-off.</div>';
   content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="selection"><div><strong>${escapeHtml(teams.home?.name||"Home")} vs ${escapeHtml(teams.away?.name||"Away")}</strong><div class="muted">${escapeHtml(league.name||"Football")} · ${escapeHtml(fixture.status?.long||"Fixture")} · ${apiFixtureTime(f)}</div></div><strong>${goals.home??"—"} : ${goals.away??"—"}</strong></div>${marketHtml}<div class="notice">You can add these external odds to your Booking Code slip. They are not yet connected to BLUSTAKE's secure bet placement and settlement database, so they cannot be staked until the backend integration is completed.</div>`;
- }catch(err){if(requestToken===officialDetailsRequestToken){const message=String(err.message||"Please try again.");const rateLimited=/429|rate limit|too many requests/i.test(message);content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="notice">${rateLimited?"The football data provider is temporarily rate-limiting requests. Please wait about one minute and try this match again.":"Could not load match markets: "+escapeHtml(message)}</div>`;}}
- finally{if(requestToken===officialDetailsRequestToken)officialDetailsLoadingId="";}
+ }catch(err){content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="notice">Could not load match markets: ${escapeHtml(err.message||"Please try again.")}</div>`;}
 }
 $("matches")?.addEventListener("click",e=>{if(e.target.closest(".api-odd-select"))return;const card=e.target.closest(".match[data-api-fixture-id]");if(card){e.preventDefault();openOfficialFixtureDetails(card);}});
 // External-feed odds are selectable from both the match card and its full market panel.
@@ -1922,7 +1923,7 @@ document.addEventListener("click",function(e){
   const match=button.dataset.externalMatch||"Football match";
   const index=selectedMarkets.findIndex(x=>String(x.fixtureId)===fixtureId&&x.market===market);
   if(index>=0)selectedMarkets.splice(index,1);else selectedMarkets.push({match,market,odds,fixtureId,marketId:"",isExternal:true});
-  document.querySelectorAll(`[data-external-fixture="${CSS.escape(fixtureId)}"]`).forEach(b=>{if(b.dataset.market===market){b.classList.toggle("selected",index<0);b.setAttribute("aria-pressed",String(index<0));}});
+  document.querySelectorAll(`[data-external-fixture="${CSS.escape(fixtureId)}"]`).forEach(b=>{if(b.dataset.market===market)b.classList.toggle("selected",index<0)});
   renderBookingCode();const fab=document.getElementById("blustakeFloatingSlip");if(fab){fab.hidden=selectedMarkets.length===0;const n=fab.querySelector("[data-slip-count]");if(n)n.textContent=String(selectedMarkets.length)}
   const status=$("marketSelectionStatus");if(status){status.textContent=selectedMarkets.length+" selection(s) added to your booking slip.";status.className="status ok";}
 },true);
