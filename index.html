@@ -1898,26 +1898,64 @@ async function loadFixtures(){
   document.documentElement.classList.remove("fixtures-loading");
   applyFixtureFilters();
 }
-function openMatchDetails(matchId){const match=fixtureCache.find(x=>x.id===matchId);if(!match)return;const modals=[...document.querySelectorAll("#matchDetailsModal")];modals.slice(1).forEach(x=>x.remove());const modal=$("matchDetailsModal");const content=$("matchDetailsContent");content.replaceChildren();content.innerHTML=renderFixtureCard(match,true);modal.classList.add("open");document.body.style.overflow="hidden";}
+function renderAdminMatchDetails(match){
+ const clock=fixtureClock(match), score=fixtureScore(match,clock.minute), finished=clock.status==="full_time";
+ const when=match.kickoff_at?new Date(match.kickoff_at):null;
+ const dateLabel=when&&!Number.isNaN(when.getTime())?when.toLocaleDateString(undefined,{month:"2-digit",day:"2-digit"}):"Date TBC";
+ const dayLabel=when&&!Number.isNaN(when.getTime())?when.toLocaleDateString(undefined,{weekday:"long"}):"Admin-created fixture";
+ const timeLabel=when&&!Number.isNaN(when.getTime())?when.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",hour12:false}):"TBC";
+ const grouped={Main:[],Goals:[],Half:[],Bookings:[],Corners:[],Other:[]};
+ (match.markets||[]).forEach(m=>{const n=String(m.market_name||"").toLowerCase();let c="Other";if(/winner|result|1x2|double chance|draw no bet|handicap/.test(n)&&!/half|1st half|2nd half/.test(n))c="Main";else if(/goal|over\/under|both teams|correct score|team total|clean sheet|odd\/even|result & btts/.test(n))c="Goals";else if(/half|1st period|2nd period/.test(n))c="Half";else if(/card|booking|yellow|red card/.test(n))c="Bookings";else if(/corner/.test(n))c="Corners";grouped[c].push(m)});
+ const marketHtml=(match.markets||[]).length?Object.entries(grouped).filter(([,items])=>items.length).map(([cat,items])=>`<div class="market-category-block" data-market-category="${cat}">${items.map(m=>`<section class="market-group"><h4>${escapeHtml(m.market_name||"Market")}</h4><div class="market-grid">${`<button type="button" class="market" disabled aria-disabled="true"><small>No open selection</small>—</button>` .replace('<button type="button" class="market" disabled aria-disabled="true"><small>No open selection</small>—</button>','')}${items.length?items.filter(x=>Number(x.odds)>1).map(x=>{const marketName=(x.market_name||"Market")+" · "+(x.selection_name||"Selection");const selected=selectedMarkets.some(z=>String(z.fixtureId)===String(match.id)&&z.market===marketName);return `<button type="button" class="market ${selected?"selected":""}" data-fixture-market="${escapeHtml(match.id)}" data-market-id="${escapeHtml(x.id)}" data-market="${escapeHtml(marketName)}" data-odds="${Number(x.odds)}" aria-pressed="${selected}" ${finished||x.is_open===false?"disabled":""}><small>${escapeHtml(x.selection_name||"Selection")}</small><strong>${Number(x.odds).toFixed(2)}</strong></button>`}).join(""):'<div class="notice">No open selections in this market.</div>'}</div></section>`).join("")}</div>`).join(""):'<div class="notice">No markets are available for this fixture yet.</div>';
+ const categories=`<div class="match-details-cats" role="tablist">${["All","Main","Goals","Half","Bookings","Corners","Other"].map((x,i)=>`<button type="button" class="${i===0?"active":""}" data-market-filter="${x}">${x}</button>`).join("")}</div>`;
+ const tabs=`<div class="match-details-main-tabs" role="tablist"><button type="button" class="active" data-detail-tab="Markets">Markets</button><button type="button" data-detail-tab="Stats">Stats</button><button type="button" data-detail-tab="Codes">Codes</button></div>`;
+ const statusLabel=finished?"Full time":clock.status==="scheduled"?"Upcoming":clock.status==="half_time"?"Half-time":`${clock.minute}′ · ${clock.label}`;
+ const badge='<span class="team-logo-fallback" aria-hidden="true">⚽</span>';
+ return `<div class="match-details-header"><strong>BLUSTAKE · Match details &amp; markets</strong><button type="button" id="closeMatchDetails">Close ×</button></div><section class="match-details-hero"><div class="match-details-league">${escapeHtml(match.competition||"BLUSTAKE Football")} · ${match.source_type==="admin_simulated"?"Admin-created fixture":"Fixture"}</div><div class="match-details-teams"><div class="match-details-team">${badge}<span class="match-details-team-name">${escapeHtml(match.home_team||"Home")}</span><small>HOME</small></div><div class="match-details-center"><div class="match-details-date">${escapeHtml(dateLabel)}</div><div>${escapeHtml(dayLabel)}</div><div class="match-details-kickoff">${escapeHtml(timeLabel)}</div><div class="match-details-score">${clock.status==="scheduled"?"—":score.home+" : "+score.away}</div><div class="match-details-state">${escapeHtml(statusLabel)}</div></div><div class="match-details-team">${badge}<span class="match-details-team-name">${escapeHtml(match.away_team||"Away")}</span><small>AWAY</small></div></div></section>${tabs}${categories}<div class="match-details-market-list" id="matchDetailsMarketList">${marketHtml}${finished?'<div class="notice">This match has finished. Markets are closed and selections cannot be added.</div>':'<div class="notice">Tap any available odds to add the selection to your Booking Code slip.</div>'}</div><div id="matchDetailsExtra" hidden></div>`;
+}
+function openMatchDetails(matchId){const match=fixtureCache.find(x=>String(x.id)===String(matchId));if(!match)return;const modal=enforceSingleMatchDetailsModal()||$("matchDetailsModal");const content=modal?.querySelector("#matchDetailsContent")||$("matchDetailsContent");if(!modal||!content)return;content.replaceChildren();content.innerHTML=renderAdminMatchDetails(match);modal.classList.add("open");document.body.style.overflow="hidden";content.querySelectorAll("[data-market-filter]").forEach(btn=>btn.addEventListener("click",()=>{content.querySelectorAll("[data-market-filter]").forEach(b=>b.classList.toggle("active",b===btn));const chosen=btn.dataset.marketFilter;content.querySelectorAll("[data-market-category]").forEach(group=>group.hidden=chosen!=="All"&&group.dataset.marketCategory!==chosen);}));const list=content.querySelector("#matchDetailsMarketList");content.querySelectorAll("[data-detail-tab]").forEach(btn=>btn.addEventListener("click",()=>{content.querySelectorAll("[data-detail-tab]").forEach(b=>b.classList.toggle("active",b===btn));const extra=content.querySelector("#matchDetailsExtra");if(btn.dataset.detailTab==="Markets"){list.hidden=false;extra.hidden=true;}else{list.hidden=true;extra.hidden=false;extra.innerHTML=btn.dataset.detailTab==="Stats"?'<div class="notice">Match statistics are not recorded for this admin-created fixture.</div>':'<div class="notice">Tap available market odds to add them to your Booking Code slip.</div>';}}));}
 function closeMatchDetails(){officialDetailsRequestToken++;officialDetailsLoadingId="";$("matchDetailsModal").classList.remove("open");document.body.style.overflow="";}
 document.addEventListener("click",e=>{if(e.target.closest("#closeMatchDetails")){e.preventDefault();closeMatchDetails();}});
 $("matchDetailsModal")?.addEventListener("click",e=>{if(e.target.id==="matchDetailsModal")closeMatchDetails();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeMatchDetails();});
 let officialDetailsRequestToken=0;
 let officialDetailsLoadingId="";
+const officialDetailsMemoryCache=new Map();
+async function fetchOfficialDetailsCached(id){
+ const key="blustake:fixture-details:"+String(id);
+ const now=Date.now();
+ const memory=officialDetailsMemoryCache.get(String(id));
+ if(memory&&now-memory.time<5*60*1000)return memory.payload;
+ try{const raw=sessionStorage.getItem(key);if(raw){const saved=JSON.parse(raw);if(saved&&saved.time&&now-saved.time<5*60*1000&&saved.payload){officialDetailsMemoryCache.set(String(id),saved);return saved.payload;}}}catch(_){}
+ const response=await fetch(`/api/football?type=details&id=${encodeURIComponent(id)}`,{headers:{Accept:"application/json"}});
+ const payload=await response.json().catch(()=>({}));
+ if(!response.ok||payload.error)throw new Error(payload.error||`Request failed (${response.status})`);
+ const entry={time:now,payload};officialDetailsMemoryCache.set(String(id),entry);try{sessionStorage.setItem(key,JSON.stringify(entry));}catch(_){}
+ return payload;
+}
+function enforceSingleMatchDetailsModal(){
+ const all=[...document.querySelectorAll('[id="matchDetailsModal"]')];
+ if(all.length<2)return all[0]||null;
+ const keep=all.find(x=>x.querySelector('#matchDetailsContent'))||all[0];
+ all.forEach(x=>{if(x!==keep)x.remove();});
+ const content=keep.querySelector('#matchDetailsContent');
+ if(content){const headers=[...content.querySelectorAll('.match-details-header')];headers.slice(1).forEach(x=>x.remove());}
+ return keep;
+}
+// Guard against duplicate modal nodes left by repeated script execution or stale markup.
+if(document.body){enforceSingleMatchDetailsModal();new MutationObserver(()=>enforceSingleMatchDetailsModal()).observe(document.body,{childList:true,subtree:true});}
 async function openOfficialFixtureDetails(card){
  const id=String(card?.dataset?.apiFixtureId||"");if(!/^\d+$/.test(id))return;
- const duplicateModals=[...document.querySelectorAll("#matchDetailsModal")];duplicateModals.slice(1).forEach(x=>x.remove());
- const modal=$("matchDetailsModal"),content=$("matchDetailsContent");if(!modal||!content)return;
+ const modal=enforceSingleMatchDetailsModal()||$("matchDetailsModal");const content=modal?.querySelector("#matchDetailsContent")||$("matchDetailsContent");if(!modal||!content)return;
  // Ignore repeated taps on the same fixture while its market request is in flight.
  if(officialDetailsLoadingId===id && modal.classList.contains("open"))return;
  officialDetailsLoadingId=id;const requestToken=++officialDetailsRequestToken;
  const title=card.querySelector(".compact-team-list")?.innerText||"Football match";
  content.replaceChildren();
- content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Official match markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="notice">Loading fixture details and available markets for ${escapeHtml(title.replace(/\n/g," vs "))}…</div>`;
+ content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="match-details-hero"><div class="match-details-teams"><div class="match-details-team"><span class="team-logo-fallback">⚽</span><span class="match-details-team-name">${escapeHtml(title.split("\n")[0]||"Home team")}</span></div><div class="match-details-center"><div class="match-details-kickoff">Loading markets</div></div><div class="match-details-team"><span class="team-logo-fallback">⚽</span><span class="match-details-team-name">Please wait</span></div></div></div>`;
  modal.classList.add("open");document.body.style.overflow="hidden";
  try{
-  const response=await fetch(`/api/football?type=details&id=${encodeURIComponent(id)}`,{headers:{Accept:"application/json"}});const payload=await response.json().catch(()=>({}));if(!response.ok||payload.error)throw new Error(payload.error||`Request failed (${response.status})`);
+  const payload=await fetchOfficialDetailsCached(id);
   if(requestToken!==officialDetailsRequestToken)return;
   const f=payload.response||{},fixture=f.fixture||{},league=f.league||{},teams=f.teams||{},goals=f.goals||{},markets=Array.isArray(f.markets)?f.markets:[];
   const winner=markets.find(m=>/^(match winner|match result|1x2|full.?time result)$/i.test(String(m.name||"")));
@@ -1939,13 +1977,14 @@ async function openOfficialFixtureDetails(card){
   const homeLogo=teams.home?.logo||"",awayLogo=teams.away?.logo||"",leagueLogo=league.logo||"";
   const groupedMarkets={Main:[],Goals:[],Half:[],Bookings:[],Corners:[],Other:[]};
   markets.forEach(m=>{const n=String(m.name||"").toLowerCase();let bucket="Other";if(/winner|result|1x2|double chance|draw no bet|handicap/.test(n)&&!/half|1st half|2nd half/.test(n))bucket="Main";else if(/goal|over\/under|both teams|correct score|team total/.test(n))bucket="Goals";else if(/half|1st period|2nd period/.test(n))bucket="Half";else if(/card|booking|yellow|red card/.test(n))bucket="Bookings";else if(/corner/.test(n))bucket="Corners";groupedMarkets[bucket].push(m)});
-  const marketHtml=markets.length?Object.entries(groupedMarkets).filter(([,list])=>list.length).map(([category,list])=>`<div class="market-category-block" data-market-category="${category}">${list.map(m=>`<section class="market-group"><h4>${escapeHtml(m.name||"Market")}</h4><div class="market-grid">${(m.values||[]).map(v=>Number(v.odd)>1?`<button type="button" class="market api-modal-market" ${finished?"disabled":""} data-external-fixture="${escapeHtml(id)}" data-external-match="${escapeHtml(fixtureLabel)}" data-market="${escapeHtml((m.name||"Market")+" · "+(v.value||"Selection"))}" data-odds="${Number(v.odd)}"><small>${escapeHtml(v.value||"Selection")}</small><strong>${Number(v.odd).toFixed(2)}</strong></button>`:"").join("")}</div></section>`).join("")}</div>`).join(""):'<div class="notice">The provider did not return available odds for this fixture. Try another match or check back closer to kick-off.</div>';
+  const marketHtml=markets.length?Object.entries(groupedMarkets).filter(([,list])=>list.length).map(([category,list])=>`<div class="market-category-block" data-market-category="${category}">${list.map(m=>`<section class="market-group"><h4>${escapeHtml(m.name||"Market")}</h4><div class="market-grid">${(m.values||[]).map(v=>Number(v.odd)>1?`<button type="button" class="market api-modal-market ${selectedMarkets.some(s=>String(s.fixtureId)===String(id)&&s.market===((m.name||"Market")+" · "+(v.value||"Selection")))?"selected":""}" aria-pressed="${selectedMarkets.some(s=>String(s.fixtureId)===String(id)&&s.market===((m.name||"Market")+" · "+(v.value||"Selection")))}" ${finished?"disabled":""} data-external-fixture="${escapeHtml(id)}" data-external-match="${escapeHtml(fixtureLabel)}" data-market="${escapeHtml((m.name||"Market")+" · "+(v.value||"Selection"))}" data-odds="${Number(v.odd)}"><small>${escapeHtml(v.value||"Selection")}</small><strong>${Number(v.odd).toFixed(2)}</strong></button>`:"").join("")}</div></section>`).join("")}</div>`).join(""):'<div class="notice">The provider did not return available odds for this fixture. Try another match or check back closer to kick-off.</div>';
   const tabs=`<div class="match-details-main-tabs" role="tablist"><button type="button" class="active" data-detail-tab="Markets">Markets</button><button type="button" data-detail-tab="Stats">Stats</button><button type="button" data-detail-tab="Codes">Codes</button></div>`;
   const categories=`<div class="match-details-cats" role="tablist">${["All","Main","Goals","Half","Bookings","Corners"].map((name,i)=>`<button type="button" class="${i===0?"active":""}" data-market-filter="${name}">${name}</button>`).join("")}</div>`;
   const homeFallback=`<span class="team-logo-fallback">⚽</span>`,awayFallback=homeFallback;
-  content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details</strong><button type="button" id="closeMatchDetails">Close ×</button></div><section class="match-details-hero"><div class="match-details-league">${leagueLogo?`<img src="${escapeHtml(leagueLogo)}" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:5px">`:""}${escapeHtml(league.name||"Football")}</div><div class="match-details-teams"><div class="match-details-team">${homeLogo?`<img src="${escapeHtml(homeLogo)}" alt="${escapeHtml(teams.home?.name||"Home")} badge" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'team-logo-fallback',textContent:'⚽'}))">`:homeFallback}<span class="match-details-team-name">${escapeHtml(teams.home?.name||"Home")}</span></div><div class="match-details-center"><div class="match-details-date">${escapeHtml(dateLabel)}</div><div>${escapeHtml(fixtureDate?fixtureDate.toLocaleDateString(undefined,{weekday:"long"}):"Match")}</div><div class="match-details-kickoff">${escapeHtml(timeLabel)}</div><div class="match-details-score">${goals.home??"—"} : ${goals.away??"—"}</div><div class="match-details-state">${escapeHtml(fixture.status?.long||"Scheduled")}</div></div><div class="match-details-team">${awayLogo?`<img src="${escapeHtml(awayLogo)}" alt="${escapeHtml(teams.away?.name||"Away")} badge" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'team-logo-fallback',textContent:'⚽'}))">`:awayFallback}<span class="match-details-team-name">${escapeHtml(teams.away?.name||"Away")}</span></div></div></section>${tabs}${categories}<div class="match-details-market-list" id="matchDetailsMarketList">${marketHtml}${finished?'<div class="notice">This match has finished. Markets are shown for reference only; selections are disabled.</div>':'<div class="notice">External odds are for display only and are not connected to secure bet placement or settlement yet.</div>'}</div><div id="matchDetailsExtra" hidden></div>`;
+  content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details</strong><button type="button" id="closeMatchDetails">Close ×</button></div><section class="match-details-hero"><div class="match-details-league">${leagueLogo?`<img src="${escapeHtml(leagueLogo)}" alt="" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:5px">`:""}${escapeHtml(league.name||"Football")}</div><div class="match-details-teams"><div class="match-details-team">${homeLogo?`<img src="${escapeHtml(homeLogo)}" alt="${escapeHtml(teams.home?.name||"Home")} badge" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'team-logo-fallback',textContent:'⚽'}))">`:homeFallback}<span class="match-details-team-name">${escapeHtml(teams.home?.name||"Home")}</span></div><div class="match-details-center"><div class="match-details-date">${escapeHtml(dateLabel)}</div><div>${escapeHtml(fixtureDate?fixtureDate.toLocaleDateString(undefined,{weekday:"long"}):"Match")}</div><div class="match-details-kickoff">${escapeHtml(timeLabel)}</div><div class="match-details-score">${goals.home??"—"} : ${goals.away??"—"}</div><div class="match-details-state">${escapeHtml(fixture.status?.long||"Scheduled")}</div></div><div class="match-details-team">${awayLogo?`<img src="${escapeHtml(awayLogo)}" alt="${escapeHtml(teams.away?.name||"Away")} badge" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'team-logo-fallback',textContent:'⚽'}))">`:awayFallback}<span class="match-details-team-name">${escapeHtml(teams.away?.name||"Away")}</span></div></div></section>${tabs}${categories}<div class="match-details-market-list" id="matchDetailsMarketList">${marketHtml}${finished?'<div class="notice">This match has finished. Markets are shown for reference only; selections are disabled.</div>':'<div class="notice">Choose odds to add them to your Booking Code slip. External-feed selections remain a preview until secure database betting is connected.</div>'}</div><div id="matchDetailsExtra" hidden></div>`;
   const marketList=content.querySelector("#matchDetailsMarketList");
   content.querySelectorAll("[data-market-filter]").forEach(btn=>btn.addEventListener("click",()=>{content.querySelectorAll("[data-market-filter]").forEach(b=>b.classList.toggle("active",b===btn));const selected=btn.dataset.marketFilter;content.querySelectorAll("[data-market-category]").forEach(group=>{group.hidden=selected!=="All"&&group.dataset.marketCategory!==selected;});}));
+  enforceSingleMatchDetailsModal();
   content.querySelectorAll("[data-detail-tab]").forEach(btn=>btn.addEventListener("click",()=>{content.querySelectorAll("[data-detail-tab]").forEach(b=>b.classList.toggle("active",b===btn));if(btn.dataset.detailTab==="Markets"){marketList.hidden=false;content.querySelector("#matchDetailsExtra").hidden=true;}else{marketList.hidden=true;const extra=content.querySelector("#matchDetailsExtra");extra.hidden=false;extra.innerHTML=btn.dataset.detailTab==="Stats"?'<div class="notice">Match statistics are not included in the current fixture response.</div>':'<div class="notice">Booking Code selections are added from available market odds. Real bookmaker booking-code redemption is not connected.</div>';}}));
  }catch(err){if(requestToken===officialDetailsRequestToken){const message=String(err.message||"Please try again.");const rateLimited=/429|rate limit|too many requests/i.test(message);content.innerHTML=`<div class="match-details-header"><strong>BLUSTAKE · Match details & markets</strong><button type="button" id="closeMatchDetails">Close ✕</button></div><div class="notice">${rateLimited?"The football data provider is temporarily rate-limiting requests. Please wait about one minute and try this match again.":"Could not load match markets: "+escapeHtml(message)}</div>`;}}
  finally{if(requestToken===officialDetailsRequestToken)officialDetailsLoadingId="";}
@@ -2324,4 +2363,60 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 #matches .compact-api-odd strong{font-size:14px;line-height:1.1;color:#075b91;font-weight:950}
 #matches .compact-api-odds .compact-feed-label{font-size:9px;letter-spacing:.2px;overflow-wrap:anywhere}
 @media(max-width:390px){#matches .compact-match-main{grid-template-columns:minmax(0,1fr) minmax(132px,1fr)}#matches .compact-api-odd{min-height:40px}#matches .compact-api-odd strong{font-size:12px}#matches .compact-api-odd small{font-size:9px}}
+
+/* BLUSTAKE professional market-detail layout: navy, electric blue and white. */
+.match-details-backdrop{z-index:10050;background:rgba(5,20,38,.76)}
+.match-details-panel{background:#f5f8fc;color:#142b45;padding:12px 12px calc(34px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;width:min(100%,780px);max-height:94dvh;}
+.match-details-header{background:#12385f;color:#fff;border:1px solid #275a87;border-radius:14px;min-height:62px;padding:14px 16px;margin-bottom:0;position:sticky;top:0;z-index:8;box-shadow:0 4px 14px #0a2c4a22}
+.match-details-header strong{font-size:17px;letter-spacing:.1px}
+.match-details-header button{background:#2a5278;color:#fff;border:1px solid #52789b;min-width:78px}
+.match-details-hero{background:#fff;padding:18px 12px 17px;border-bottom:1px solid #dbe5f0}
+.match-details-league{color:#236bb3;text-decoration:none;font-weight:750;font-size:13px;margin-bottom:18px}
+.match-details-teams{grid-template-columns:minmax(0,1fr) 76px minmax(0,1fr);gap:8px}
+.match-details-team{gap:9px;color:#162f4a}
+.match-details-team img,.team-logo-fallback{width:62px;height:62px;object-fit:contain;border:1px solid #dce7f2;border-radius:14px;background:#fff;padding:5px}
+.team-logo-fallback{font-size:28px}
+.match-details-team-name{font-size:14px;font-weight:850}
+.match-details-center{gap:6px;color:#687b90}
+.match-details-date{font-size:13px;color:#62758a}
+.match-details-kickoff{background:#eaf3fc;color:#174b7d}
+.match-details-score{color:#12385f;font-size:20px}
+.match-details-state{font-weight:750;color:#2770b5}
+.match-details-main-tabs{background:#f5f8fc;top:62px;gap:6px;padding:10px 0 8px}
+.match-details-main-tabs button{border:1px solid #d8e4f0;background:#e8f0f8;color:#294966;border-radius:9px}
+.match-details-main-tabs button.active{background:#12385f;border-color:#12385f;color:#fff}
+.match-details-cats{gap:20px;background:#fff;padding:4px 10px 0;border-bottom:1px solid #dbe5f0;position:sticky;top:120px;z-index:6}
+.match-details-cats button{color:#526a82;padding:12px 0 10px}
+.match-details-cats button.active{border-color:#1684e8;color:#12385f}
+.match-details-market-list{background:#fff;padding:0 12px 18px}
+.match-details-market-list .market-group{padding:16px 0 18px;border-bottom:1px solid #e4ebf3}
+.match-details-market-list .market-group h4{font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:.25px;color:#172b42;margin:0 0 12px;padding-left:10px;border-left:4px solid #2b8be6}
+.match-details-market-list .market-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.match-details-market-list .market{display:flex!important;flex-direction:column;align-items:center!important;justify-content:center!important;gap:7px!important;text-align:center!important;min-width:0;min-height:66px;padding:10px 7px!important;border:1px solid #8ab8e4!important;border-radius:9px!important;background:#eef6ff!important;color:#153e66!important;box-shadow:0 1px 2px #0d3b6410;font-weight:800}
+.match-details-market-list .market small{font-size:12px!important;line-height:1.25;color:#4b6782!important;font-weight:750;overflow-wrap:anywhere}
+.match-details-market-list .market strong{font-size:17px;color:#1266ad!important;font-weight:900}
+.match-details-market-list .market.selected{background:#145b95!important;border-color:#145b95!important;color:#fff!important}
+.match-details-market-list .market.selected small,.match-details-market-list .market.selected strong{color:#fff!important}
+.match-details-market-list .market:disabled{opacity:.52;cursor:not-allowed}
+.match-details-market-list .notice{margin:12px 0;padding:10px 12px;border-radius:9px;background:#edf4fb;color:#587089;font-size:12px}
+.match-details-panel .market-category-block[hidden]{display:none!important}
+#matchDetailsContent .match-details-header~.match-details-header{display:none!important}
+#matchDetailsContent .match-details-hero{display:block}
+#blustakeFloatingSlip{z-index:10060}
+@media(max-width:420px){.match-details-panel{padding:8px 8px calc(28px + env(safe-area-inset-bottom));max-height:95dvh}.match-details-header{padding:12px 11px;min-height:58px}.match-details-header strong{font-size:15px}.match-details-header button{min-width:70px;padding:9px}.match-details-teams{grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr);gap:4px}.match-details-team img,.team-logo-fallback{width:52px;height:52px}.match-details-team-name{font-size:12px}.match-details-market-list{padding:0 8px 16px}.match-details-market-list .market-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.match-details-market-list .market{min-height:62px!important;padding:9px 6px!important}.match-details-market-list .market small{font-size:12px!important}.match-details-market-list .market strong{font-size:16px}.match-details-cats{gap:17px;top:114px}}
+
+</style>
+
+<style id="blustake-admin-match-details-final">
+.match-details-header{background:linear-gradient(120deg,#12395f,#176ba0)!important;color:#fff!important;border-radius:14px!important;margin-bottom:10px!important}
+.match-details-header button{background:#ffffff20!important;color:#fff!important}
+.match-details-hero{border:1px solid #d9e6f1!important;border-radius:12px!important;margin-bottom:8px!important;background:#fff!important}
+.match-details-team small{font-size:11px;color:#71849a;font-weight:800;letter-spacing:.5px}
+.match-details-team .team-logo-fallback{border:1px solid #d6e3ef;background:#f3f8fc;color:#176ba0}
+.match-details-market-list .market-group h4{color:#24445f!important}
+.match-details-market-list .market{background:#eef7fc!important;border:1px solid #cfe2f0!important;color:#145b8b!important;border-radius:9px!important}
+.match-details-market-list .market small{color:#71879b!important}
+.match-details-market-list .market.selected{background:#075b91!important;border-color:#075b91!important;color:#fff!important}
+.match-details-market-list .market.selected small{color:#fff!important}
+.match-details-market-list .market:disabled{opacity:.48!important;cursor:not-allowed!important}
 </style>
