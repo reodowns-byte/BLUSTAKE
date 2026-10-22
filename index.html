@@ -1898,6 +1898,87 @@ async function loadFixtures(){
   document.documentElement.classList.remove("fixtures-loading");
   applyFixtureFilters();
 }
+
+/* Unified, reference-inspired market presentation for feed and admin fixtures. */
+function blustakeMarketBucket(name){
+ const n=String(name||'').toLowerCase();
+ if(/correct score|exact score/.test(n)) return 'Correct Score';
+ if(/double chance/.test(n)) return 'Double Chance';
+ if(/draw no bet/.test(n)) return 'Draw No Bet';
+ if(/both teams.*score|btts|gg\/ng/.test(n)) return 'Both Teams to Score';
+ if(/odd\/even|odd or even/.test(n)) return 'Odd/Even Goals';
+ if(/clean sheet/.test(n)) return 'Clean Sheet';
+ if(/result.*btts|btts.*result/.test(n)) return 'Result & BTTS';
+ if(/over\/under|total goals|goals over|team total|over under/.test(n)) return 'Over/Under';
+ if(/match winner|match result|1x2|full.?time result|winner/.test(n) && !/half|period/.test(n)) return '1X2';
+ if(/half|1st period|2nd period/.test(n)) return 'Half-time Markets';
+ if(/corner/.test(n)) return 'Corners';
+ if(/card|booking|yellow|red card/.test(n)) return 'Bookings';
+ if(/handicap/.test(n)) return 'Handicap';
+ return String(name||'Other Markets');
+}
+function blustakeCorrectScoreSide(selection, homeName, awayName){
+ const v=String(selection||'').match(/(\d+)\s*[-:]\s*(\d+)/);
+ if(!v) return 'Other';
+ const h=Number(v[1]),a=Number(v[2]);
+ return h>a?'home':h===a?'draw':'away';
+}
+function blustakeMarketCard({matchId,matchLabel,marketName,selectionName,odds,marketId,external,disabled,selected}){
+ const attrs=external
+  ? `data-external-fixture="${escapeHtml(matchId)}" data-external-match="${escapeHtml(matchLabel)}" data-market="${escapeHtml(marketName+' · '+selectionName)}"`
+  : `data-fixture-market="${escapeHtml(matchId)}" data-market-id="${escapeHtml(marketId||'')}" data-market="${escapeHtml(marketName+' · '+selectionName)}"`;
+ return `<button type="button" class="market blustake-reference-odd ${selected?'selected':''}" ${attrs} data-odds="${Number(odds)}" aria-pressed="${!!selected}" ${disabled?'disabled':''}><small>${escapeHtml(selectionName||'Selection')}</small><strong>${Number(odds).toFixed(2)}</strong></button>`;
+}
+function renderBlustakeFeedMarkets(markets, fixtureId, fixtureLabel, finished){
+ if(!Array.isArray(markets)||!markets.length) return '<div class="notice">No markets are available from the football feed for this match yet.</div>';
+ const buckets=new Map();
+ for(const market of markets){
+  const name=String(market.name||'Other Markets');
+  const key=blustakeMarketBucket(name);
+  if(!buckets.has(key)) buckets.set(key,[]);
+  buckets.get(key).push(market);
+ }
+ const order=['1X2','Double Chance','Draw No Bet','Handicap','Over/Under','Both Teams to Score','Odd/Even Goals','Clean Sheet','Result & BTTS','Correct Score','Half-time Markets','Bookings','Corners'];
+ const keys=[...buckets.keys()].sort((a,b)=>{const ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)});
+ return keys.map(bucket=>{
+  const group=buckets.get(bucket), all=[];
+  group.forEach(m=>(Array.isArray(m.values)?m.values:[]).forEach(v=>{const odd=Number(v.odd??v.odds);if(Number.isFinite(odd)&&odd>1)all.push({marketName:m.name||bucket,selectionName:v.value||v.name||'Selection',odds:odd});}));
+  if(!all.length)return '';
+  const selected=(x)=>selectedMarkets.some(s=>String(s.fixtureId)===String(fixtureId)&&s.market===x.marketName+' · '+x.selectionName);
+  if(bucket==='Correct Score'){
+   const sides={home:[],draw:[],away:[],Other:[]};
+   all.forEach(x=>sides[blustakeCorrectScoreSide(x.selectionName)||'Other'].push(x));
+   const columns=[['home', 'HOME WIN'],['draw','DRAW'],['away','AWAY WIN']];
+   return `<section class="market-group reference-market-group reference-correct-score"><h4>${bucket}</h4><div class="reference-score-columns">${columns.map(([side,label])=>`<div class="reference-score-column"><div class="reference-column-title">${label}</div>${sides[side].map(x=>blustakeMarketCard({matchId:fixtureId,matchLabel:fixtureLabel,...x,external:true,disabled:finished,selected:selected(x)})).join('')}</div>`).join('')}</div>${sides.Other.length?sides.Other.map(x=>blustakeMarketCard({matchId:fixtureId,matchLabel:fixtureLabel,...x,external:true,disabled:finished,selected:selected(x)})).join(''):''}</section>`;
+  }
+  if(bucket==='Over/Under'){
+   const lines=new Map();
+   all.forEach(x=>{const m=x.selectionName.match(/(over|under)\s*([0-9]+(?:\.[0-9]+)?)/i);const line=m?m[2]:'Other';if(!lines.has(line))lines.set(line,[]);lines.get(line).push(x)});
+   return `<section class="market-group reference-market-group"><h4>${bucket}</h4><div class="reference-ou-table"><div class="reference-ou-head"><span>GOAL</span><span>OVER</span><span>UNDER</span></div>${[...lines.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([line,items])=>{const over=items.find(x=>/^over/i.test(x.selectionName)),under=items.find(x=>/^under/i.test(x.selectionName));return `<div class="reference-ou-row"><strong>${line==='Other'?'—':line}</strong><div>${over?blustakeMarketCard({matchId:fixtureId,matchLabel:fixtureLabel,...over,external:true,disabled:finished,selected:selected(over)}):''}</div><div>${under?blustakeMarketCard({matchId:fixtureId,matchLabel:fixtureLabel,...under,external:true,disabled:finished,selected:selected(under)}):''}</div></div>`}).join('')}</div></section>`;
+  }
+  return `<section class="market-group reference-market-group"><h4>${escapeHtml(bucket==='1X2'?'1X2':bucket)}</h4><div class="market-grid reference-market-grid">${all.map(x=>blustakeMarketCard({matchId:fixtureId,matchLabel:fixtureLabel,...x,external:true,disabled:finished,selected:selected(x)})).join('')}</div></section>`;
+ }).join('')||'<div class="notice">No usable market prices were returned for this match.</div>';
+}
+function renderBlustakeDatabaseMarkets(match, finished){
+ const rows=Array.isArray(match.markets)?match.markets.filter(x=>Number(x.odds)>1):[];
+ if(!rows.length)return '<div class="notice">No markets are available for this fixture yet.</div>';
+ const groups=new Map();
+ rows.forEach(x=>{const key=blustakeMarketBucket(x.market_name);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x)});
+ const order=['1X2','Double Chance','Draw No Bet','Handicap','Over/Under','Both Teams to Score','Odd/Even Goals','Clean Sheet','Result & BTTS','Correct Score','Half-time Markets','Bookings','Corners'];
+ return [...groups.keys()].sort((a,b)=>{const ai=order.indexOf(a),bi=order.indexOf(b);return (ai<0?999:ai)-(bi<0?999:bi)}).map(bucket=>{
+  const items=groups.get(bucket);const card=(x)=>{const selected=selectedMarkets.some(z=>String(z.fixtureId)===String(match.id)&&z.market===((x.market_name||'Market')+' · '+(x.selection_name||'Selection')));return blustakeMarketCard({matchId:match.id,matchLabel:(match.home_team||'Home')+' vs '+(match.away_team||'Away'),marketName:x.market_name||bucket,selectionName:x.selection_name||'Selection',odds:x.odds,marketId:x.id,external:false,disabled:finished||x.is_open===false,selected});};
+  if(bucket==='Correct Score'){
+   const sides={home:[],draw:[],away:[],Other:[]};items.forEach(x=>sides[blustakeCorrectScoreSide(x.selection_name,match.home_team,match.away_team)].push(x));
+   return `<section class="market-group reference-market-group reference-correct-score"><h4>${bucket}</h4><div class="reference-score-columns">${[['home','HOME WIN'],['draw','DRAW'],['away','AWAY WIN']].map(([side,label])=>`<div class="reference-score-column"><div class="reference-column-title">${label}</div>${sides[side].map(card).join('')}</div>`).join('')}</div>${sides.Other.map(card).join('')}</section>`;
+  }
+  if(bucket==='Over/Under'){
+   const lines=new Map();items.forEach(x=>{const m=String(x.selection_name||'').match(/(over|under)\s*([0-9]+(?:\.[0-9]+)?)/i);const line=m?m[2]:'Other';if(!lines.has(line))lines.set(line,[]);lines.get(line).push(x)});
+   return `<section class="market-group reference-market-group"><h4>${bucket}</h4><div class="reference-ou-table"><div class="reference-ou-head"><span>GOAL</span><span>OVER</span><span>UNDER</span></div>${[...lines.entries()].sort((a,b)=>Number(a[0])-Number(b[0])).map(([line,arr])=>`<div class="reference-ou-row"><strong>${line==='Other'?'—':line}</strong><div>${arr.filter(x=>/^over/i.test(x.selection_name||'')).map(card).join('')}</div><div>${arr.filter(x=>/^under/i.test(x.selection_name||'')).map(card).join('')}</div></div>`).join('')}</div></section>`;
+  }
+  return `<section class="market-group reference-market-group"><h4>${escapeHtml(bucket)}</h4><div class="market-grid reference-market-grid">${items.map(card).join('')}</div></section>`;
+ }).join('');
+}
+
 function renderAdminMatchDetails(match){
  const clock=fixtureClock(match), score=fixtureScore(match,clock.minute), finished=clock.status==="full_time";
  const when=match.kickoff_at?new Date(match.kickoff_at):null;
@@ -1906,7 +1987,7 @@ function renderAdminMatchDetails(match){
  const timeLabel=when&&!Number.isNaN(when.getTime())?when.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",hour12:false}):"TBC";
  const grouped={Main:[],Goals:[],Half:[],Bookings:[],Corners:[],Other:[]};
  (match.markets||[]).forEach(m=>{const n=String(m.market_name||"").toLowerCase();let c="Other";if(/winner|result|1x2|double chance|draw no bet|handicap/.test(n)&&!/half|1st half|2nd half/.test(n))c="Main";else if(/goal|over\/under|both teams|correct score|team total|clean sheet|odd\/even|result & btts/.test(n))c="Goals";else if(/half|1st period|2nd period/.test(n))c="Half";else if(/card|booking|yellow|red card/.test(n))c="Bookings";else if(/corner/.test(n))c="Corners";grouped[c].push(m)});
- const marketHtml=(match.markets||[]).length?Object.entries(grouped).filter(([,items])=>items.length).map(([cat,items])=>`<div class="market-category-block" data-market-category="${cat}">${items.map(m=>`<section class="market-group"><h4>${escapeHtml(m.market_name||"Market")}</h4><div class="market-grid">${`<button type="button" class="market" disabled aria-disabled="true"><small>No open selection</small>—</button>` .replace('<button type="button" class="market" disabled aria-disabled="true"><small>No open selection</small>—</button>','')}${items.length?items.filter(x=>Number(x.odds)>1).map(x=>{const marketName=(x.market_name||"Market")+" · "+(x.selection_name||"Selection");const selected=selectedMarkets.some(z=>String(z.fixtureId)===String(match.id)&&z.market===marketName);return `<button type="button" class="market ${selected?"selected":""}" data-fixture-market="${escapeHtml(match.id)}" data-market-id="${escapeHtml(x.id)}" data-market="${escapeHtml(marketName)}" data-odds="${Number(x.odds)}" aria-pressed="${selected}" ${finished||x.is_open===false?"disabled":""}><small>${escapeHtml(x.selection_name||"Selection")}</small><strong>${Number(x.odds).toFixed(2)}</strong></button>`}).join(""):'<div class="notice">No open selections in this market.</div>'}</div></section>`).join("")}</div>`).join(""):'<div class="notice">No markets are available for this fixture yet.</div>';
+ const marketHtml=renderBlustakeDatabaseMarkets(match,finished);
  const categories=`<div class="match-details-cats" role="tablist">${["All","Main","Goals","Half","Bookings","Corners","Other"].map((x,i)=>`<button type="button" class="${i===0?"active":""}" data-market-filter="${x}">${x}</button>`).join("")}</div>`;
  const tabs=`<div class="match-details-main-tabs" role="tablist"><button type="button" class="active" data-detail-tab="Markets">Markets</button><button type="button" data-detail-tab="Stats">Stats</button><button type="button" data-detail-tab="Codes">Codes</button></div>`;
  const statusLabel=finished?"Full time":clock.status==="scheduled"?"Upcoming":clock.status==="half_time"?"Half-time":`${clock.minute}′ · ${clock.label}`;
@@ -1975,9 +2056,7 @@ async function openOfficialFixtureDetails(card){
   const dateLabel=fixtureDate&&!Number.isNaN(fixtureDate.getTime())?fixtureDate.toLocaleDateString(undefined,{month:"2-digit",day:"2-digit",weekday:"long"}):"Date TBC";
   const timeLabel=fixtureDate&&!Number.isNaN(fixtureDate.getTime())?fixtureDate.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",hour12:false}):"TBC";
   const homeLogo=teams.home?.logo||"",awayLogo=teams.away?.logo||"",leagueLogo=league.logo||"";
-  const groupedMarkets={Main:[],Goals:[],Half:[],Bookings:[],Corners:[],Other:[]};
-  markets.forEach(m=>{const n=String(m.name||"").toLowerCase();let bucket="Other";if(/winner|result|1x2|double chance|draw no bet|handicap/.test(n)&&!/half|1st half|2nd half/.test(n))bucket="Main";else if(/goal|over\/under|both teams|correct score|team total/.test(n))bucket="Goals";else if(/half|1st period|2nd period/.test(n))bucket="Half";else if(/card|booking|yellow|red card/.test(n))bucket="Bookings";else if(/corner/.test(n))bucket="Corners";groupedMarkets[bucket].push(m)});
-  const marketHtml=markets.length?Object.entries(groupedMarkets).filter(([,list])=>list.length).map(([category,list])=>`<div class="market-category-block" data-market-category="${category}">${list.map(m=>`<section class="market-group"><h4>${escapeHtml(m.name||"Market")}</h4><div class="market-grid">${(m.values||[]).map(v=>Number(v.odd)>1?`<button type="button" class="market api-modal-market ${selectedMarkets.some(s=>String(s.fixtureId)===String(id)&&s.market===((m.name||"Market")+" · "+(v.value||"Selection")))?"selected":""}" aria-pressed="${selectedMarkets.some(s=>String(s.fixtureId)===String(id)&&s.market===((m.name||"Market")+" · "+(v.value||"Selection")))}" ${finished?"disabled":""} data-external-fixture="${escapeHtml(id)}" data-external-match="${escapeHtml(fixtureLabel)}" data-market="${escapeHtml((m.name||"Market")+" · "+(v.value||"Selection"))}" data-odds="${Number(v.odd)}"><small>${escapeHtml(v.value||"Selection")}</small><strong>${Number(v.odd).toFixed(2)}</strong></button>`:"").join("")}</div></section>`).join("")}</div>`).join(""):'<div class="notice">The provider did not return available odds for this fixture. Try another match or check back closer to kick-off.</div>';
+  const marketHtml=renderBlustakeFeedMarkets(markets,id,fixtureLabel,finished);
   const tabs=`<div class="match-details-main-tabs" role="tablist"><button type="button" class="active" data-detail-tab="Markets">Markets</button><button type="button" data-detail-tab="Stats">Stats</button><button type="button" data-detail-tab="Codes">Codes</button></div>`;
   const categories=`<div class="match-details-cats" role="tablist">${["All","Main","Goals","Half","Bookings","Corners"].map((name,i)=>`<button type="button" class="${i===0?"active":""}" data-market-filter="${name}">${name}</button>`).join("")}</div>`;
   const homeFallback=`<span class="team-logo-fallback">⚽</span>`,awayFallback=homeFallback;
@@ -2322,6 +2401,55 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
  syncBalance();syncAmount();
 })();
 </script>
+
+
+<style id="blustake-reference-market-layout">
+/* Dream Bet-inspired structure, restyled in BLUSTAKE navy/electric blue/white. */
+#matchDetailsContent{background:#f5f8fc!important;color:#172b45!important}
+#matchDetailsContent .match-details-header{background:linear-gradient(110deg,#17385f,#2466a5)!important;color:#fff!important;border-radius:16px!important;margin:10px 10px 14px!important;padding:17px 16px!important;box-shadow:0 5px 16px #17385f18!important}
+#matchDetailsContent .match-details-header strong{font-size:17px!important;line-height:1.3!important}
+#matchDetailsContent .match-details-header button{background:#ffffff24!important;color:#fff!important;border:1px solid #ffffff30!important;border-radius:11px!important;padding:10px 13px!important;white-space:nowrap}
+#matchDetailsContent .match-details-hero{background:#fff!important;border:1px solid #d9e4f1!important;border-radius:18px!important;margin:0 10px 14px!important;padding:18px 12px!important}
+#matchDetailsContent .match-details-league{text-align:center!important;color:#60758f!important;font-weight:750!important;margin-bottom:16px!important}
+#matchDetailsContent .match-details-teams{display:grid!important;grid-template-columns:minmax(0,1fr) 82px minmax(0,1fr)!important;align-items:center!important;gap:8px!important;text-align:center!important}
+#matchDetailsContent .match-details-team{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-width:0!important;text-align:center!important}
+#matchDetailsContent .match-details-team img,#matchDetailsContent .team-logo-fallback{width:58px!important;height:58px!important;min-width:58px!important;object-fit:contain!important;border:1px solid #d9e4f1!important;border-radius:14px!important;background:#f5f8fc!important;padding:8px!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:27px!important}
+#matchDetailsContent .match-details-team-name{font-size:14px!important;line-height:1.3!important;font-weight:850!important;overflow-wrap:anywhere!important;color:#172b45!important}
+#matchDetailsContent .match-details-center{color:#657994!important;font-size:12px!important;line-height:1.6!important}
+#matchDetailsContent .match-details-kickoff{display:inline-block!important;background:#edf4fc!important;border-radius:9px!important;padding:5px 10px!important;color:#245f9e!important;font-weight:900!important;font-size:17px!important;margin:5px 0!important}
+#matchDetailsContent .match-details-score{font-size:24px!important;font-weight:950!important;color:#17385f!important}
+#matchDetailsContent .match-details-state{color:#2670bd!important;font-weight:850!important}
+#matchDetailsContent .match-details-main-tabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:0 10px 10px!important;background:transparent!important}
+#matchDetailsContent .match-details-main-tabs button{background:#e8f0fa!important;border:1px solid #d6e3f2!important;border-radius:12px!important;color:#294766!important;padding:13px 5px!important;font-weight:850!important}
+#matchDetailsContent .match-details-main-tabs button.active{background:#17385f!important;color:#fff!important;border-color:#17385f!important}
+#matchDetailsContent .match-details-cats{display:flex!important;gap:20px!important;overflow-x:auto!important;padding:8px 14px 0!important;background:#fff!important;border-bottom:1px solid #dce6f1!important;white-space:nowrap!important}
+#matchDetailsContent .match-details-cats button{background:transparent!important;border:0!important;border-bottom:4px solid transparent!important;color:#526b86!important;padding:10px 0 12px!important;font-weight:850!important;flex:0 0 auto!important}
+#matchDetailsContent .match-details-cats button.active{border-bottom-color:#3688e8!important;color:#17385f!important}
+#matchDetailsContent .match-details-market-list{padding:0 10px 28px!important;background:#fff!important}
+#matchDetailsContent .market-category-block{display:contents!important}
+#matchDetailsContent .market-group.reference-market-group{display:block!important;margin:0!important;padding:17px 3px 19px!important;border-bottom:1px solid #e0e8f2!important;background:#fff!important}
+#matchDetailsContent .market-group.reference-market-group h4{font-size:14px!important;letter-spacing:.35px!important;text-transform:uppercase!important;font-weight:950!important;color:#152b47!important;margin:0 0 12px!important;padding-left:10px!important;border-left:5px solid #3688e8!important}
+#matchDetailsContent .reference-market-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+#matchDetailsContent .market.blustake-reference-odd{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:7px!important;min-width:0!important;min-height:64px!important;padding:10px 7px!important;background:#edf5fd!important;border:1.5px solid #b9d5f2!important;border-radius:11px!important;color:#17385f!important;text-align:center!important;white-space:normal!important;box-shadow:none!important}
+#matchDetailsContent .market.blustake-reference-odd small{display:block!important;color:#526b86!important;font-size:11px!important;font-weight:800!important;line-height:1.25!important;margin:0!important;overflow-wrap:anywhere!important}
+#matchDetailsContent .market.blustake-reference-odd strong{font-size:16px!important;color:#2466a5!important;font-weight:950!important;line-height:1.1!important}
+#matchDetailsContent .market.blustake-reference-odd.selected{background:#17385f!important;border-color:#3688e8!important;color:#fff!important;box-shadow:0 0 0 2px #3688e833!important}
+#matchDetailsContent .market.blustake-reference-odd.selected small,#matchDetailsContent .market.blustake-reference-odd.selected strong{color:#fff!important}
+#matchDetailsContent .market.blustake-reference-odd:disabled{opacity:.48!important;cursor:not-allowed!important}
+#matchDetailsContent .reference-ou-table{display:flex!important;flex-direction:column!important;gap:7px!important}
+#matchDetailsContent .reference-ou-head,#matchDetailsContent .reference-ou-row{display:grid!important;grid-template-columns:42px minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important;align-items:center!important}
+#matchDetailsContent .reference-ou-head{font-size:11px!important;font-weight:950!important;color:#536983!important;text-align:center!important;padding:0 0 3px!important}
+#matchDetailsContent .reference-ou-row>strong{font-size:12px!important;color:#172b45!important}
+#matchDetailsContent .reference-ou-row>div{min-width:0!important}
+#matchDetailsContent .reference-ou-row .market.blustake-reference-odd{width:100%!important;min-height:48px!important;padding:8px 4px!important}
+#matchDetailsContent .reference-correct-score .reference-score-columns{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;border-top:1px solid #e5edf6!important;padding-top:9px!important}
+#matchDetailsContent .reference-column-title{font-size:10px!important;font-weight:950!important;color:#526b86!important;text-align:center!important;min-height:29px!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow-wrap:anywhere!important}
+#matchDetailsContent .reference-score-column{display:flex!important;flex-direction:column!important;gap:6px!important;min-width:0!important}
+#matchDetailsContent .reference-score-column .market.blustake-reference-odd{min-height:43px!important;flex-direction:row!important;justify-content:space-between!important;gap:3px!important;padding:7px 6px!important}
+#matchDetailsContent .reference-score-column .market.blustake-reference-odd small{font-size:11px!important;color:#17385f!important}
+#matchDetailsContent .reference-score-column .market.blustake-reference-odd strong{font-size:12px!important}
+@media(max-width:420px){#matchDetailsContent .match-details-teams{grid-template-columns:minmax(0,1fr) 68px minmax(0,1fr)!important;gap:4px!important}#matchDetailsContent .match-details-team img,#matchDetailsContent .team-logo-fallback{width:48px!important;height:48px!important;min-width:48px!important}#matchDetailsContent .reference-market-grid{gap:5px!important}#matchDetailsContent .market.blustake-reference-odd{padding:8px 4px!important;min-height:58px!important}#matchDetailsContent .market.blustake-reference-odd small{font-size:10px!important}#matchDetailsContent .reference-ou-head,#matchDetailsContent .reference-ou-row{grid-template-columns:34px minmax(0,1fr) minmax(0,1fr)!important;gap:5px!important}#matchDetailsContent .reference-score-columns{gap:4px!important}#matchDetailsContent .reference-score-column .market.blustake-reference-odd{padding:6px 4px!important}}
+</style>
 
 </body>
 </html>
