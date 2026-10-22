@@ -289,7 +289,14 @@ export default async function handler(req, res) {
       oddsFixtureErrors: oddsErrors,
       note: 'Only external-provider match rows and external market selections are synchronized. Existing bet records and odds snapshots are not modified.'
     });
-  } catch (error) {
-    return res.status(502).json({ error: 'Football synchronization failed', details: String(error?.message || error).slice(0, 700) });
+    } catch (error) {
+    console.error('[BLUSTAKE football sync failed]', {
+      message: String(error?.message || error),
+      stack: error?.stack || null
+    });
+
+    return res.status(502).json({
+      error: 'Football synchronization failed',
+      details: String(error?.message || error).slice(0, 700)
+    });
   }
-}
