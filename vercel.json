@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/sync-football",
-      "schedule": "0 0 * * *"
+      "schedule": "*/15 * * * *"
     }
   ]
 }
