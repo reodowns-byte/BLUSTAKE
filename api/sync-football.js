@@ -319,13 +319,13 @@ export default async function handler(req, res) {
         external_provider: providerName,
         external_fixture_id: String(externalId),
         external_last_synced_at: nowIso,
-        ...(homeGoals !== null ? { score_home: homeGoals } : {}),
-        ...(awayGoals !== null ? { score_away: awayGoals } : {}),
-        ...(confirmedFinished ? {
-          final_home: homeGoals,
-          final_away: awayGoals,
-          match_finished_at: nowIso
-        } : {})
+        // Every row in a PostgREST bulk upsert must have identical keys.
+        // Use nulls for score fields when the provider has not confirmed them.
+        score_home: homeGoals,
+        score_away: awayGoals,
+        final_home: confirmedFinished ? homeGoals : null,
+        final_away: confirmedFinished ? awayGoals : null,
+        match_finished_at: confirmedFinished ? nowIso : null
       },
       fixture: { id: String(externalId), status }
     };
