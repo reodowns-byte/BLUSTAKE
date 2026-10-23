@@ -1532,7 +1532,7 @@ async function openBookingCodePreview(){
       source:m.isExternal?"external":"blustake"
     }));
     if(selections.some(m=>!Number.isFinite(m.odds)||m.odds<=1||m.odds>1000))throw new Error("One or more selections have invalid odds.");
-    const {data,error}=await supabaseClient.rpc("blustake_create_booking_code_snapshot",{p_selections:selections,p_stake:stake>0?stake:null,p_bet_type:document.getElementById("bookingSingleTab")?.classList.contains("active")?"single":"multiple"});
+    const {data,error}=await supabaseClient.rpc("bluestake_create_booking_code_snapshot",{p_selections:selections,p_stake:stake>0?stake:null,p_bet_type:document.getElementById("bookingSingleTab")?.classList.contains("active")?"single":"multiple"});
     if(error)throw error;
     const code=typeof data==="string"?data:(data?.booking_code||data?.code||data?.[0]?.booking_code);
     if(!code)throw new Error("The database did not return a booking code. Run the supplied SQL first.");
@@ -1556,7 +1556,7 @@ async function loadSavedBookingCode(){
   if(!supabaseClient){setStatus("bookingCodeLoadStatus","Database connection is not configured.","error");return;}
   if(button)button.disabled=true;setStatus("bookingCodeLoadStatus","Loading saved selections…");
   try{
-    const {data,error}=await supabaseClient.rpc("blustake_load_booking_code",{p_booking_code:code});
+    const {data,error}=await supabaseClient.rpc("bluestake_load_booking_code",{p_booking_code:code});
     if(error)throw error;
     const record=Array.isArray(data)?data[0]:data;
     const rows=record?.selections;
