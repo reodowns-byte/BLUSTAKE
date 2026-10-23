@@ -735,12 +735,12 @@ body{padding-bottom:76px!important}
     <div class="booking-slip-page">
       <header class="booking-slip-header">
         <strong>BLUSTAKE</strong>
+        <button type="button" id="closeBookingSlip" aria-label="Close booking slip" style="margin-left:auto;background:#ffffff20;color:#fff;border:1px solid #ffffff50;border-radius:50%;width:36px;height:36px;font-size:23px;line-height:1">×</button>
         <div class="booking-slip-balance"><span>▣</span><div><small>BALANCE</small><strong id="bookingWalletBalance">GH₵ —</strong></div></div>
       </header>
       <div class="booking-mode-tabs">
-        <button type="button" class="active" id="bookingMultipleTab">Multiple</button>
         <button type="button" id="bookingSingleTab">Single</button>
-        <button type="button" id="bookingSystemTab">System</button>
+        <button type="button" class="active" id="bookingMultipleTab">Multiple</button>
       </div>
       <div class="booking-slip-summary">
         <span class="booking-selection-count" id="slipCount">0</span>
@@ -1513,9 +1513,12 @@ function openBookingCodePreview(){
   const stake=Number($("stakeInput")?.value||0);
   const code="BLU-"+Array.from({length:6},()=> "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
   $("generatedBookingCode").textContent=code;
+  const stamp=$("bookingTicketTimestamp");if(stamp)stamp.textContent=new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
   $("previewTotalOdds").textContent=odds.toFixed(2);
   $("previewStake").textContent=money(stake);
-  $("previewPotentialReturn").textContent=money(stake*odds);
+  const bonus=Math.max(0,stake*odds-stake)*0.05;
+  if($("previewBonus"))$("previewBonus").textContent=money(bonus);
+  $("previewPotentialReturn").textContent=money(stake*odds+bonus);
   $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`
     <div class="booking-code-selection">
       <div class="booking-code-selection-main">
@@ -1534,7 +1537,9 @@ function closeBookingCodePreview(){
 document.getElementById("bookBetButton")?.addEventListener("click",openBookingCodePreview);
 document.querySelectorAll("[data-close-booking-code]").forEach(el=>el.addEventListener("click",closeBookingCodePreview));
 document.getElementById("closeBookingCodePreview")?.addEventListener("click",closeBookingCodePreview);
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeBookingCodePreview();});
+document.getElementById("copyBookingCode")?.addEventListener("click",async()=>{const code=$("generatedBookingCode")?.textContent||"";try{await navigator.clipboard.writeText(code);setStatus("bookingBetStatus","Booking code copied.","ok");}catch(_){const range=document.createRange();range.selectNodeContents($("generatedBookingCode"));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);setStatus("bookingBetStatus","Select and copy the highlighted booking code.");}});
+document.getElementById("closeBookingSlip")?.addEventListener("click",()=>setView("sports"));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeBookingCodePreview();if(!$("bookingCodeModal")?.classList.contains("hidden"))return;const view=$("view-booking-code");if(view&&!view.classList.contains("hidden"))setView("sports");}});
 renderBookingCode();
 
 $("placeBet")?.addEventListener("click",async()=>{
@@ -2276,26 +2281,63 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
     <div class="booking-code-card">
       <button type="button" class="booking-code-close" aria-label="Close booking code" data-close-booking-code>×</button>
       <div class="booking-code-banner">
-        <strong>ⓑ BLUSTAKE</strong>
-        <span>Booking slip</span>
+        <strong>▣ BLUSTAKE</strong>
+        <span id="bookingTicketTimestamp">Booking slip</span>
       </div>
       <div class="booking-code-content">
-        <p class="booking-code-eyebrow">BLUSTAKE BOOKING CODE</p>
-        <h2 id="bookingCodeModalTitle">Your selections</h2>
-        <div class="booking-code-value" id="generatedBookingCode">BLU----</div>
-        <p class="booking-code-disclaimer">Preview code only — it is not redeemable at a bookmaker until a booking-code service is integrated.</p>
-        <div class="booking-code-summary">
-          <div><span>Total odds</span><strong id="previewTotalOdds">1.00</strong></div>
-          <div><span>Stake</span><strong id="previewStake">GH₵0.00</strong></div>
-          <div><span>Potential return</span><strong id="previewPotentialReturn">GH₵0.00</strong></div>
+        <p class="booking-code-eyebrow" style="text-align:center">BOOKING CODE</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap">
+          <div class="booking-code-value" id="generatedBookingCode" style="margin:4px 0">BLU----</div>
+          <button type="button" id="copyBookingCode" class="booking-code-primary" style="width:auto;margin:4px 0;padding:12px 14px">▢ Copy</button>
         </div>
-        <div class="booking-code-selections-title">Selected matches</div>
+        <div class="booking-code-summary" style="grid-template-columns:1fr;margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#eef2f6;border-radius:0;border-bottom:3px solid #075b91"><span style="font-size:16px;color:#172d40">Odds</span><strong id="previewTotalOdds" style="font-size:26px">1.00</strong></div>
+        </div>
+        <div class="booking-code-selections-title">Example Bet</div>
+        <div class="booking-code-summary" style="grid-template-columns:1fr;gap:0;margin:0;border:1px solid #dce6ee;border-top:0;border-radius:0 0 8px 8px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;background:#fff;padding:5px 0"><span style="font-size:15px;color:#34455b">Stake</span><strong id="previewStake">GH₵0.00</strong></div>
+          <div style="display:flex;justify-content:space-between;background:#fff;padding:5px 0"><span style="font-size:15px;color:#34455b">Bonus</span><strong id="previewBonus">GH₵0.00</strong></div>
+          <div style="display:flex;justify-content:space-between;background:#fff;padding:5px 0"><span style="font-size:15px;color:#34455b">Payout</span><strong id="previewPotentialReturn">GH₵0.00</strong></div>
+        </div>
+        <div class="booking-code-selections-title" style="margin-top:14px">Selections</div>
         <div id="bookingCodeSelections" class="booking-code-selections"></div>
-        <button type="button" id="closeBookingCodePreview" class="booking-code-primary">Back to Booking Code</button>
+        <button type="button" id="closeBookingCodePreview" class="booking-code-primary">Load to Betslip</button>
+        <p class="booking-code-disclaimer">This is a BLUSTAKE booking reference for loading your saved selections. It does not place a bet until you select Place Bet.</p>
       </div>
     </div>
   </div>
 
+
+
+<style id="blustake-reference-betslip-overrides">
+/* Screenshot-matched booking slip overlay, preserving BLUSTAKE blue/white colors. */
+#view-booking-code.view:not(.hidden){position:fixed!important;inset:0!important;z-index:9997!important;display:flex!important;align-items:flex-end!important;justify-content:center!important;padding:0!important;background:rgba(8,22,36,.62)!important;overflow:hidden!important}
+#view-booking-code .booking-slip-page{position:relative;width:min(100%,650px);max-width:650px;max-height:84dvh;min-height:0;margin:0!important;overflow:auto!important;overscroll-behavior:contain;border-radius:22px 22px 0 0!important;box-shadow:0 -10px 38px rgba(0,0,0,.22);padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+#view-booking-code .booking-slip-header{min-height:62px;padding:12px 14px;border-radius:22px 22px 0 0;position:sticky;top:0;z-index:2}
+#view-booking-code .booking-slip-header>strong{font-size:18px}
+#view-booking-code .booking-mode-tabs{grid-template-columns:1fr 1fr;padding:0 12px}
+#view-booking-code .booking-mode-tabs button{height:48px;border-radius:13px 13px 0 0;font-size:14px}
+#view-booking-code .booking-slip-summary{padding:10px 13px}
+#view-booking-code .booking-slip-empty{min-height:150px;padding:28px 18px}
+#view-booking-code .booking-slip-selections .selection{padding:14px 13px;align-items:flex-start}
+#view-booking-code .booking-people-also{display:none}
+#view-booking-code .booking-bonus-note{margin:10px 13px;font-size:11px}
+#view-booking-code .booking-stake-row{padding:10px 13px}
+#view-booking-code .booking-stake-tools{padding:9px 12px}
+#view-booking-code .booking-potential-row{border-radius:0;margin:0;padding:14px 13px;background:#e5f3fb;color:#075b91}
+#view-booking-code .booking-actions{position:sticky;bottom:0;z-index:2;box-shadow:0 -2px 8px #163c5b10}
+#view-booking-code #bookBetButton{background:#142b3d!important;color:#fff!important}
+#view-booking-code #placeBet{background:#075b91!important;color:#fff!important}
+#view-booking-code #placeBet:disabled{background:#dce6ee!important;color:#718497!important}
+.booking-code-card{border-radius:3px;background:#fff;max-height:88dvh}
+.booking-code-banner{background:#075b91!important;min-height:76px}
+.booking-code-content{padding:18px 16px 20px}
+.booking-code-value{background:#edf7fc!important;color:#075b91!important;border:0!important;border-radius:5px!important;letter-spacing:2px}
+.booking-code-selections-title{background:#e5f2fa!important;color:#075b91!important;border-radius:0!important}
+.booking-code-selection{padding:14px 12px}
+.booking-code-primary{background:#075b91!important;border-radius:8px!important}
+@media(min-width:700px){#view-booking-code .booking-slip-page{margin-bottom:0!important}}
+</style>
 
   <style>
     #blustakeFloatingSlip{position:fixed;right:18px;bottom:112px;z-index:9998;width:66px;height:66px;border:3px solid #fff;border-radius:50%;background:#f2c94c;color:#082b48;box-shadow:0 5px 18px #001c334d;display:flex;align-items:center;justify-content:center;font-size:25px;font-weight:800;touch-action:none;cursor:grab}
