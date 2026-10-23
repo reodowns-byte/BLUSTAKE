@@ -1519,13 +1519,20 @@ document.getElementById("bookingSystemTab")?.addEventListener("click",()=>{
 async function openBookingCodePreview(){
   if(!selectedMarkets.length){setStatus("bookingBetStatus","Choose at least one match odds selection before creating a booking code.","error");return;}
   if(!supabaseClient){setStatus("bookingBetStatus","Database connection is not configured.","error");return;}
-  const marketIds=selectedMarkets.map(m=>m.marketId).filter(Boolean);
-  if(marketIds.length!==selectedMarkets.length){setStatus("bookingBetStatus","One or more selections are not saved BLUSTAKE markets, so they cannot be shared by booking code yet. Choose markets from the BLUSTAKE database fixtures.","error");return;}
   const button=$("bookBetButton");if(button)button.disabled=true;
   setStatus("bookingBetStatus","Saving your booking code and selections…");
   try{
     const stake=Number($("stakeInput")?.value||0);
-    const {data,error}=await supabaseClient.rpc("blustake_create_booking_code",{p_market_ids:marketIds,p_stake:stake>0?stake:null,p_bet_type:document.getElementById("bookingSingleTab")?.classList.contains("active")?"single":"multiple"});
+    const selections=selectedMarkets.map(m=>({
+      match_label:String(m.match||"Selected match").slice(0,200),
+      market_label:String(m.market||"Selection").slice(0,160),
+      odds:Number(m.odds),
+      match_id:/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(m.fixtureId||""))?m.fixtureId:null,
+      market_id:/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(m.marketId||""))?m.marketId:null,
+      source:m.isExternal?"external":"blustake"
+    }));
+    if(selections.some(m=>!Number.isFinite(m.odds)||m.odds<=1||m.odds>1000))throw new Error("One or more selections have invalid odds.");
+    const {data,error}=await supabaseClient.rpc("blustake_create_booking_code_snapshot",{p_selections:selections,p_stake:stake>0?stake:null,p_bet_type:document.getElementById("bookingSingleTab")?.classList.contains("active")?"single":"multiple"});
     if(error)throw error;
     const code=typeof data==="string"?data:(data?.booking_code||data?.code||data?.[0]?.booking_code);
     if(!code)throw new Error("The database did not return a booking code. Run the supplied SQL first.");
@@ -1538,7 +1545,7 @@ async function openBookingCodePreview(){
     $("previewPotentialReturn").textContent=money(stake*odds+bonus);
     $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`<div class="booking-code-selection"><div class="booking-code-selection-main"><strong>⚽ ${escapeHtml(m.market||"Selection")}</strong><span>${escapeHtml(m.match)}</span></div><div class="booking-code-selection-odds">${Number(m.odds).toFixed(2)}</div></div>`).join("");
     const modal=$("bookingCodeModal");modal?.classList.remove("hidden");document.body.style.overflow="hidden";
-    setStatus("bookingBetStatus","Booking code saved. Share "+code+" so another user can load these saved selections.","ok");
+    setStatus("bookingBetStatus","Booking code saved. Share "+code+" so another user can load these selections. External odds are saved as a snapshot and are not enabled for bet placement.","ok");
   }catch(err){setStatus("bookingBetStatus","Could not save booking code: "+(err.message||"database error")+". Apply the booking-code SQL migration and try again.","error");}
   finally{if(button)button.disabled=false;}
 }
@@ -1554,8 +1561,8 @@ async function loadSavedBookingCode(){
     const record=Array.isArray(data)?data[0]:data;
     const rows=record?.selections;
     if(!record||!Array.isArray(rows)||!rows.length)throw new Error("Booking code not found, expired, or no longer available.");
-    const loaded=rows.map(x=>({match:x.match_label,market:x.market_label,odds:Number(x.odds),fixtureId:x.match_id,marketId:x.market_id,isExternal:false}));
-    if(loaded.some(x=>!x.marketId||!Number.isFinite(x.odds)||x.odds<=1))throw new Error("The saved booking contains unavailable selections. Please ask for a new code.");
+    const loaded=rows.map(x=>({match:x.match_label,market:x.market_label,odds:Number(x.odds),fixtureId:x.match_id||"",marketId:x.market_id||"",isExternal:x.source==="external"||!x.market_id}));
+    if(loaded.some(x=>!Number.isFinite(x.odds)||x.odds<=1||x.odds>1000||!x.match||!x.market))throw new Error("The saved booking contains invalid selections. Please ask for a new code.");
     selectedMarkets.splice(0,selectedMarkets.length,...loaded);
     if(record.stake!=null&&Number(record.stake)>0)$("stakeInput").value=Number(record.stake).toFixed(2);
     document.querySelectorAll("#matches .market.selected").forEach(b=>{b.classList.remove("selected");b.setAttribute("aria-pressed","false");});
