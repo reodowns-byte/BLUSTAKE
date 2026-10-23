@@ -1536,13 +1536,16 @@ async function openBookingCodePreview(){
     if(error)throw error;
     const code=typeof data==="string"?data:(data?.booking_code||data?.code||data?.[0]?.booking_code);
     if(!code)throw new Error("The database did not return a booking code. Run the supplied SQL first.");
-    $("generatedBookingCode").textContent=code;
+    const codeDisplay=String(code).replace(/^BLU-/i,"");
+    $("generatedBookingCode").textContent=codeDisplay;
+    $("generatedBookingCode").dataset.fullCode=String(code);
     const stamp=$("bookingTicketTimestamp");if(stamp)stamp.textContent=new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
     const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
     $("previewTotalOdds").textContent=odds.toFixed(2);$("previewStake").textContent=money(stake);
-    const bonus=Math.max(0,stake*odds-stake)*0.05;
+    const basePayout=Math.max(0,stake*odds);
+    const bonus=basePayout*0.02;
     if($("previewBonus"))$("previewBonus").textContent=money(bonus);
-    $("previewPotentialReturn").textContent=money(stake*odds+bonus);
+    $("previewPotentialReturn").textContent=money(basePayout+bonus);
     $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`<div class="booking-code-selection"><div class="booking-code-selection-main"><strong>⚽ ${escapeHtml(m.market||"Selection")}</strong><span>${escapeHtml(m.match)}</span></div><div class="booking-code-selection-odds">${Number(m.odds).toFixed(2)}</div></div>`).join("");
     const modal=$("bookingCodeModal");modal?.classList.remove("hidden");document.body.style.overflow="hidden";
     setStatus("bookingBetStatus","Booking code saved. Share "+code+" so another user can load these selections. External odds are saved as a snapshot and are not enabled for bet placement.","ok");
@@ -1551,7 +1554,8 @@ async function openBookingCodePreview(){
 }
 async function loadSavedBookingCode(){
   const input=$("bookingCodeInput"),button=$("loadBookingCodeButton"),status=$("bookingCodeLoadStatus");
-  const code=String(input?.value||"").trim().toUpperCase();
+  let code=String(input?.value||"").trim().toUpperCase().replace(/\s+/g,"");
+  if(code && !code.startsWith("BLU-")) code="BLU-"+code;
   if(!code){setStatus("bookingCodeLoadStatus","Enter a booking code first.","error");return;}
   if(!supabaseClient){setStatus("bookingCodeLoadStatus","Database connection is not configured.","error");return;}
   if(button)button.disabled=true;setStatus("bookingCodeLoadStatus","Loading saved selections…");
@@ -1580,9 +1584,18 @@ function closeBookingCodePreview(){
   document.body.style.overflow="";
 }
 document.getElementById("bookBetButton")?.addEventListener("click",openBookingCodePreview);
-document.querySelectorAll("[data-close-booking-code]").forEach(el=>el.addEventListener("click",closeBookingCodePreview));
-document.getElementById("closeBookingCodePreview")?.addEventListener("click",()=>{closeBookingCodePreview();setStatus("bookingBetStatus","Booking code saved. You can share it, or load a code using the field above.","ok");});
-document.getElementById("copyBookingCode")?.addEventListener("click",async()=>{const code=$("generatedBookingCode")?.textContent||"";try{await navigator.clipboard.writeText(code);setStatus("bookingBetStatus","Booking code copied.","ok");}catch(_){const range=document.createRange();range.selectNodeContents($("generatedBookingCode"));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);setStatus("bookingBetStatus","Select and copy the highlighted booking code.");}});
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-close-booking-code]")){
+    e.preventDefault();
+    closeBookingCodePreview();
+  }
+  if(e.target.closest("#closeBookingCodePreview")){
+    e.preventDefault();
+    closeBookingCodePreview();
+    setStatus("bookingBetStatus","Booking code saved. You can share it, or load a code using the field above.","ok");
+  }
+});
+document.addEventListener("click",async e=>{const copyButton=e.target.closest("#copyBookingCode");if(!copyButton)return;const code=$("generatedBookingCode")?.textContent?.trim()||"";try{await navigator.clipboard.writeText(code);setStatus("bookingBetStatus","Booking code copied. Share the code without a prefix.","ok");}catch(_){const range=document.createRange();range.selectNodeContents($("generatedBookingCode"));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);setStatus("bookingBetStatus","Select and copy the highlighted booking code.");}});
 document.getElementById("closeBookingSlip")?.addEventListener("click",()=>setView("sports"));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeBookingCodePreview();if(!$("bookingCodeModal")?.classList.contains("hidden"))return;const view=$("view-booking-code");if(view&&!view.classList.contains("hidden"))setView("sports");}});
 renderBookingCode();
@@ -2324,7 +2337,7 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
   <div id="bookingCodeModal" class="booking-code-modal hidden" role="dialog" aria-modal="true" aria-labelledby="bookingCodeModalTitle">
     <div class="booking-code-backdrop" data-close-booking-code></div>
     <div class="booking-code-card">
-      <button type="button" class="booking-code-close" aria-label="Close booking code" data-close-booking-code>×</button>
+      <button type="button" class="booking-code-close" aria-label="Cancel and close booking code" data-close-booking-code>×</button>
       <div class="booking-code-banner">
         <strong>▣ BLUSTAKE</strong>
         <span id="bookingTicketTimestamp">Booking slip</span>
@@ -2377,7 +2390,10 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 .booking-code-card{border-radius:3px;background:#fff;max-height:88dvh}
 .booking-code-banner{background:#075b91!important;min-height:76px}
 .booking-code-content{padding:18px 16px 20px}
-.booking-code-value{background:#edf7fc!important;color:#075b91!important;border:0!important;border-radius:5px!important;letter-spacing:2px}
+.booking-code-value{background:#edf7fc!important;color:#075b91!important;border:0!important;border-radius:5px!important;letter-spacing:2px;overflow-wrap:anywhere;max-width:100%;font-variant-numeric:tabular-nums}
+#previewStake,#previewBonus,#previewPotentialReturn{font-variant-numeric:tabular-nums;white-space:nowrap}
+.booking-code-close{cursor:pointer;touch-action:manipulation}
+.booking-code-close:active{transform:scale(.96)}
 .booking-code-selections-title{background:#e5f2fa!important;color:#075b91!important;border-radius:0!important}
 .booking-code-selection{padding:14px 12px}
 .booking-code-primary{background:#075b91!important;border-radius:8px!important}
