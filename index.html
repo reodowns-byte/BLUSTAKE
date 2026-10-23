@@ -442,6 +442,14 @@ body.show-home-hero .hero-carousel{display:block!important}
 @media(max-width:390px){.booking-slip-header{padding:14px 12px}.booking-slip-header>strong{font-size:19px}.booking-slip-balance{padding:8px}.booking-slip-summary{padding:12px}.booking-stake-tools{gap:4px;padding:8px}.booking-stake-tools label{font-size:9px}.booking-keypad button{min-height:48px;font-size:15px}.booking-stake-row{padding-left:12px;padding-right:12px}}
 
 
+/* Booking-code loading control: visible directly in the betslip */
+.booking-code-loader{padding:13px 16px;background:#f7fafc;border-bottom:1px solid #dce6ee}
+.booking-code-loader label{display:block;margin:0 0 7px;color:#075b91;font-size:13px;font-weight:900}
+.booking-code-load-row{display:grid;grid-template-columns:minmax(0,1fr) 86px;gap:8px}
+.booking-code-load-row input{min-width:0;text-transform:uppercase}
+.booking-code-load-row .btn{margin:0;padding:11px 12px}
+#bookingCodeLoadStatus:empty{display:none}
+
 .booking-code-modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto}
 .booking-code-modal.hidden{display:none!important}
 .booking-code-backdrop{position:absolute;inset:0;background:rgba(8,25,42,.78);backdrop-filter:blur(3px)}
@@ -752,6 +760,11 @@ body{padding-bottom:76px!important}
         <div class="booking-empty-icon">▤</div>
         <strong>No selections yet</strong>
         <span>Choose odds from a match and they will appear here.</span>
+      </div>
+      <div class="booking-code-loader" aria-label="Load a saved booking code">
+        <label for="bookingCodeInput">Load booking code</label>
+        <div class="booking-code-load-row"><input id="bookingCodeInput" class="field" type="text" maxlength="24" placeholder="Enter booking code (e.g. BLU-ABC123)" autocomplete="off"><button type="button" class="btn" id="loadBookingCodeButton">Load</button></div>
+        <div id="bookingCodeLoadStatus" class="status" aria-live="polite"></div>
       </div>
       <div class="booking-people-also"><span>★</span> People also bet on… <span class="booking-expand">⌄</span></div>
       <div class="booking-bonus-note">Choose qualifying selections to see any available offers</div>
@@ -1503,40 +1516,65 @@ document.getElementById("bookingMultipleTab")?.addEventListener("click",()=>{
 document.getElementById("bookingSystemTab")?.addEventListener("click",()=>{
   document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingSystemTab"));
 });
-function openBookingCodePreview(){
-  if(!selectedMarkets.length){
-    setStatus("bookingBetStatus","Choose at least one match odds selection before creating a booking slip.","error");
-    return;
-  }
-  const modal=$("bookingCodeModal");
-  const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
-  const stake=Number($("stakeInput")?.value||0);
-  const code="BLU-"+Array.from({length:6},()=> "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
-  $("generatedBookingCode").textContent=code;
-  const stamp=$("bookingTicketTimestamp");if(stamp)stamp.textContent=new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
-  $("previewTotalOdds").textContent=odds.toFixed(2);
-  $("previewStake").textContent=money(stake);
-  const bonus=Math.max(0,stake*odds-stake)*0.05;
-  if($("previewBonus"))$("previewBonus").textContent=money(bonus);
-  $("previewPotentialReturn").textContent=money(stake*odds+bonus);
-  $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`
-    <div class="booking-code-selection">
-      <div class="booking-code-selection-main">
-        <strong>⚽ ${escapeHtml(m.market||"Selection")}</strong>
-        <span>${escapeHtml(m.match)}</span>
-      </div>
-      <div class="booking-code-selection-odds">${Number(m.odds).toFixed(2)}</div>
-    </div>`).join("");
-  modal?.classList.remove("hidden");
-  document.body.style.overflow="hidden";
+async function openBookingCodePreview(){
+  if(!selectedMarkets.length){setStatus("bookingBetStatus","Choose at least one match odds selection before creating a booking code.","error");return;}
+  if(!supabaseClient){setStatus("bookingBetStatus","Database connection is not configured.","error");return;}
+  const marketIds=selectedMarkets.map(m=>m.marketId).filter(Boolean);
+  if(marketIds.length!==selectedMarkets.length){setStatus("bookingBetStatus","One or more selections are not saved BLUSTAKE markets, so they cannot be shared by booking code yet. Choose markets from the BLUSTAKE database fixtures.","error");return;}
+  const button=$("bookBetButton");if(button)button.disabled=true;
+  setStatus("bookingBetStatus","Saving your booking code and selections…");
+  try{
+    const stake=Number($("stakeInput")?.value||0);
+    const {data,error}=await supabaseClient.rpc("blustake_create_booking_code",{p_market_ids:marketIds,p_stake:stake>0?stake:null,p_bet_type:document.getElementById("bookingSingleTab")?.classList.contains("active")?"single":"multiple"});
+    if(error)throw error;
+    const code=typeof data==="string"?data:(data?.booking_code||data?.code||data?.[0]?.booking_code);
+    if(!code)throw new Error("The database did not return a booking code. Run the supplied SQL first.");
+    $("generatedBookingCode").textContent=code;
+    const stamp=$("bookingTicketTimestamp");if(stamp)stamp.textContent=new Date().toLocaleString("en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",hour12:false});
+    const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
+    $("previewTotalOdds").textContent=odds.toFixed(2);$("previewStake").textContent=money(stake);
+    const bonus=Math.max(0,stake*odds-stake)*0.05;
+    if($("previewBonus"))$("previewBonus").textContent=money(bonus);
+    $("previewPotentialReturn").textContent=money(stake*odds+bonus);
+    $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`<div class="booking-code-selection"><div class="booking-code-selection-main"><strong>⚽ ${escapeHtml(m.market||"Selection")}</strong><span>${escapeHtml(m.match)}</span></div><div class="booking-code-selection-odds">${Number(m.odds).toFixed(2)}</div></div>`).join("");
+    const modal=$("bookingCodeModal");modal?.classList.remove("hidden");document.body.style.overflow="hidden";
+    setStatus("bookingBetStatus","Booking code saved. Share "+code+" so another user can load these saved selections.","ok");
+  }catch(err){setStatus("bookingBetStatus","Could not save booking code: "+(err.message||"database error")+". Apply the booking-code SQL migration and try again.","error");}
+  finally{if(button)button.disabled=false;}
 }
+async function loadSavedBookingCode(){
+  const input=$("bookingCodeInput"),button=$("loadBookingCodeButton"),status=$("bookingCodeLoadStatus");
+  const code=String(input?.value||"").trim().toUpperCase();
+  if(!code){setStatus("bookingCodeLoadStatus","Enter a booking code first.","error");return;}
+  if(!supabaseClient){setStatus("bookingCodeLoadStatus","Database connection is not configured.","error");return;}
+  if(button)button.disabled=true;setStatus("bookingCodeLoadStatus","Loading saved selections…");
+  try{
+    const {data,error}=await supabaseClient.rpc("blustake_load_booking_code",{p_booking_code:code});
+    if(error)throw error;
+    const record=Array.isArray(data)?data[0]:data;
+    const rows=record?.selections;
+    if(!record||!Array.isArray(rows)||!rows.length)throw new Error("Booking code not found, expired, or no longer available.");
+    const loaded=rows.map(x=>({match:x.match_label,market:x.market_label,odds:Number(x.odds),fixtureId:x.match_id,marketId:x.market_id,isExternal:false}));
+    if(loaded.some(x=>!x.marketId||!Number.isFinite(x.odds)||x.odds<=1))throw new Error("The saved booking contains unavailable selections. Please ask for a new code.");
+    selectedMarkets.splice(0,selectedMarkets.length,...loaded);
+    if(record.stake!=null&&Number(record.stake)>0)$("stakeInput").value=Number(record.stake).toFixed(2);
+    document.querySelectorAll("#matches .market.selected").forEach(b=>{b.classList.remove("selected");b.setAttribute("aria-pressed","false");});
+    renderBookingCode();
+    if(record.bet_type==="single"){$("bookingSingleTab")?.click();}else{$("bookingMultipleTab")?.click();}
+    setStatus("bookingCodeLoadStatus",loaded.length+" selection(s) loaded successfully. Review the matches and stake before placing a bet.","ok");
+    setStatus("bookingBetStatus","Booking code "+code+" loaded. Review selections and stake before placing your bet.","ok");
+  }catch(err){setStatus("bookingCodeLoadStatus",err.message||"Could not load booking code.","error");}
+  finally{if(button)button.disabled=false;}
+}
+$("loadBookingCodeButton")?.addEventListener("click",loadSavedBookingCode);
+$("bookingCodeInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();loadSavedBookingCode();}});
 function closeBookingCodePreview(){
   $("bookingCodeModal")?.classList.add("hidden");
   document.body.style.overflow="";
 }
 document.getElementById("bookBetButton")?.addEventListener("click",openBookingCodePreview);
 document.querySelectorAll("[data-close-booking-code]").forEach(el=>el.addEventListener("click",closeBookingCodePreview));
-document.getElementById("closeBookingCodePreview")?.addEventListener("click",closeBookingCodePreview);
+document.getElementById("closeBookingCodePreview")?.addEventListener("click",()=>{closeBookingCodePreview();setStatus("bookingBetStatus","Booking code saved. You can share it, or load a code using the field above.","ok");});
 document.getElementById("copyBookingCode")?.addEventListener("click",async()=>{const code=$("generatedBookingCode")?.textContent||"";try{await navigator.clipboard.writeText(code);setStatus("bookingBetStatus","Booking code copied.","ok");}catch(_){const range=document.createRange();range.selectNodeContents($("generatedBookingCode"));const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);setStatus("bookingBetStatus","Select and copy the highlighted booking code.");}});
 document.getElementById("closeBookingSlip")?.addEventListener("click",()=>setView("sports"));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeBookingCodePreview();if(!$("bookingCodeModal")?.classList.contains("hidden"))return;const view=$("view-booking-code");if(view&&!view.classList.contains("hidden"))setView("sports");}});
@@ -2209,7 +2247,7 @@ document.addEventListener("click",function(e){
   const market=button.getAttribute("data-market")||"Selection";
   const index=selectedMarkets.findIndex(x=>String(x.fixtureId)===fixtureId && x.market===market);
   if(index>=0) selectedMarkets.splice(index,1);
-  else selectedMarkets.push({match:match.home_team+" vs "+match.away_team,market,odds,fixtureId:match.id,marketId:button.getAttribute("data-market-id")||""});
+  else selectedMarkets.push({match:match.home_team+" vs "+match.away_team,market,odds,fixtureId:match.id,marketId:button.getAttribute("data-market-id")||"",isExternal:false});
   document.querySelectorAll(".market[data-fixture-market]").forEach(b=>{
     if(String(b.getAttribute("data-fixture-market"))===fixtureId && b.getAttribute("data-market")===market){
       b.classList.toggle("selected",index<0);
@@ -2302,7 +2340,7 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
         <div class="booking-code-selections-title" style="margin-top:14px">Selections</div>
         <div id="bookingCodeSelections" class="booking-code-selections"></div>
         <button type="button" id="closeBookingCodePreview" class="booking-code-primary">Load to Betslip</button>
-        <p class="booking-code-disclaimer">This is a BLUSTAKE booking reference for loading your saved selections. It does not place a bet until you select Place Bet.</p>
+        <p class="booking-code-disclaimer">This booking code is saved in BLUSTAKE and can be shared with another user to load the same saved selections. It does not place a bet until Place Bet is selected.</p>
       </div>
     </div>
   </div>
