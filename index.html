@@ -1283,11 +1283,15 @@ async function loadMyBets(){
       const returnValue=isHistory?returned:potential;
       const shortRef=b.public_ref||String(ref).slice(0,8).toUpperCase();
       const totalOdds=betLegs.reduce((product,leg)=>{const market=marketById.get(String(leg.market_id||leg.marketId));const value=Number(leg.odds_at_placement??market?.odds??leg.odds??1);return product*(Number.isFinite(value)&&value>0?value:1);},1);
-      const ticketType=betLegs.length>1?"Multiple":"Singles";
+      const ticketType=betLegs.length>1?"Multiple":"Single";
       const headClass=isHistory?(isWon?"won":isLost?"lost":"pending"):"pending";
       const returnClass=isHistory&&isLost?"lost":"";
       const displayState=isHistory?(isWon?"🏆 Won":isLost?"Lost":"Settled"):state.label;
-      return `<article class="mybet-card ${isHistory?"mybet-history-clickable":""}" ${isHistory?`data-ticket-ref="${escapeHtml(shortRef)}" data-ticket-status="${escapeHtml(isWon?"won":isLost?"lost":"settled")}" data-ticket-created="${escapeHtml(b.created_at||"")}" data-ticket-odds="${Number.isFinite(totalOdds)?totalOdds.toFixed(2):""}" data-ticket-games="${betLegs.length}"`:""}><div class="mybet-card-head ${headClass}"><strong>${escapeHtml(ticketType)}</strong><span class="mybet-state ${state.cls}">${escapeHtml(displayState)}</span></div><div class="mybet-legs-wrap">${legHtml}</div><div class="mybet-meta"><div><small>Stake</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>${isHistory?"Total Return":"Pot. Win"}</small><strong class="${isHistory&&isLost?"amount-lost":isHistory&&isWon?"amount-won":""}">${escapeHtml(money(returnValue))}</strong></div></div><div class="mybet-reference">Bet reference: ${escapeHtml(shortRef)}</div></article>`;
+      const historyDate=b.created_at?new Date(b.created_at):null;
+      const historyDay=historyDate&&!Number.isNaN(historyDate.getTime())?historyDate.toLocaleDateString("en-GB",{day:"2-digit"}):"—";
+      const historyMonth=historyDate&&!Number.isNaN(historyDate.getTime())?historyDate.toLocaleDateString("en-GB",{month:"short"}):"";
+      const ticketHtml=`<article class="mybet-card ${isHistory?"mybet-history-clickable":""}" ${isHistory?`data-ticket-ref="${escapeHtml(shortRef)}" data-ticket-status="${escapeHtml(isWon?"won":isLost?"lost":"settled")}" data-ticket-created="${escapeHtml(b.created_at||"")}" data-ticket-odds="${Number.isFinite(totalOdds)?totalOdds.toFixed(2):""}" data-ticket-games="${betLegs.length}"`:""}><div class="mybet-card-head ${headClass}"><strong>${escapeHtml(ticketType)}</strong><span class="mybet-state ${state.cls}">${escapeHtml(displayState)}${isHistory?" ›":""}</span></div><div class="mybet-meta"><div><small>Total Stake</small><strong>${escapeHtml(money(stake))}</strong></div><div><small>${isHistory?"Total Return":"Pot. Win"}</small><strong class="${isHistory&&isLost?"amount-lost":isHistory&&isWon?"amount-won":""}">${escapeHtml(money(returnValue))}</strong></div></div><div class="mybet-legs-wrap">${legHtml}</div><div class="mybet-reference">Bet reference: ${escapeHtml(shortRef)}</div></article>`;
+      return isHistory?`<div class="mybet-history-row"><div class="mybet-history-date"><strong>${historyDay}</strong><span>${historyMonth}</span></div>${ticketHtml}</div>`:ticketHtml;
     }).join("");
   }catch(err){
     list.classList.remove("hidden");
@@ -2728,4 +2732,38 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 #matchDetailsContent .reference-market-note{margin-top:9px;padding:8px 10px;border-radius:8px;background:#f0f4f8;color:#64758a;font-size:12px;line-height:1.4}
 #matchDetailsContent .blustake-initials-badge{display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:950;letter-spacing:-.5px;color:#fff;background:linear-gradient(145deg,#075b91,#12385f);border:2px solid #d8e7f5;border-radius:50%;box-shadow:0 2px 5px #12385f22}
 @media(max-width:420px){#matchDetailsContent .reference-score-grid{gap:6px!important}#matchDetailsContent .reference-score-grid .market{padding:9px 5px!important;min-height:49px!important;gap:4px!important}#matchDetailsContent .reference-score-grid .market small{font-size:12px!important}#matchDetailsContent .reference-score-grid .market strong{font-size:13px!important}}
+
+/* Settled ticket layout — faithful to the supplied FincraBet reference */
+.mybets-page:has(.mybets-list){background:#eef0f5!important}
+.mybets-page:has(.mybets-list) .mybets-list{padding:14px 12px 28px!important;background:#eef0f5!important}
+.mybet-history-row{display:grid!important;grid-template-columns:72px minmax(0,1fr)!important;align-items:start!important;gap:10px!important;margin:0 0 14px!important;padding:0 0 12px!important;border-bottom:1px solid #d9dce3!important}
+.mybet-history-date{display:flex!important;flex-direction:column!important;align-items:flex-start!important;padding:15px 0 0 3px!important;color:#737b8c!important;line-height:1.25!important}
+.mybet-history-date strong{font-size:25px!important;font-weight:850!important}
+.mybet-history-date span{font-size:16px!important;margin-top:5px!important}
+.mybet-history-row .mybet-history-clickable{min-width:0!important;width:100%!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.mybet-history-row .mybet-card-head{height:61px!important;min-height:61px!important;padding:0 16px!important;border:0!important;border-radius:0!important;background:#0f9145!important;color:#fff!important}
+.mybet-history-row .mybet-card-head.won{background:#0f9145!important}
+.mybet-history-row .mybet-card-head.lost{background:#8b93a3!important}
+.mybet-history-row .mybet-card-head.pending{background:#254d73!important}
+.mybet-history-row .mybet-card-head strong{font-size:18px!important;font-weight:850!important;color:#fff!important}
+.mybet-history-row .mybet-card-head .mybet-state{margin-left:auto!important;color:#fff!important;font-size:18px!important;font-weight:850!important;letter-spacing:0!important;text-transform:none!important}
+.mybet-history-row .mybet-meta{padding:10px 0 12px!important;gap:8px!important;background:transparent!important;border:0!important}
+.mybet-history-row .mybet-meta small{font-size:16px!important;font-weight:500!important;color:#737b8c!important}
+.mybet-history-row .mybet-meta strong{font-size:17px!important;font-weight:500!important;color:#171b24!important}
+.mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-won{font-size:27px!important;font-weight:900!important;color:#159447!important}
+.mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-lost{font-size:27px!important;font-weight:900!important;color:#8b93a3!important}
+.mybet-history-row .mybet-legs-wrap{padding:0!important;background:transparent!important}
+.mybet-history-row .mybet-leg{padding:10px 0!important;background:transparent!important;border-top:1px solid #dfe2e8!important;border-bottom:0!important}
+.mybet-history-row .mybet-leg-match{padding:2px 0!important;margin:0!important;color:#737b8c!important;font-size:15px!important;font-weight:500!important;text-decoration:none!important}
+.mybet-history-row .mybet-reference{display:none!important}
+@media(max-width:460px){
+ .mybet-history-row{grid-template-columns:72px minmax(0,1fr)!important;gap:8px!important;padding-bottom:10px!important}
+ .mybet-history-date{padding-top:14px!important}
+ .mybet-history-row .mybet-card-head{height:60px!important;min-height:60px!important;padding:0 13px!important}
+ .mybet-history-row .mybet-card-head strong{font-size:17px!important}
+ .mybet-history-row .mybet-card-head .mybet-state{font-size:17px!important}
+ .mybet-history-row .mybet-meta{padding:10px 0!important}
+ .mybet-history-row .mybet-meta small{font-size:15px!important}
+ .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-won,.mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-lost{font-size:24px!important}
+}
 </style>
