@@ -756,7 +756,6 @@ body > .header{position:sticky!important;top:0!important;z-index:120!important}
       <div class="booking-mode-tabs">
         <button type="button" class="active" id="bookingMultipleTab">Multiple</button>
         <button type="button" id="bookingSingleTab">Single</button>
-        <button type="button" id="bookingSystemTab">System</button>
       </div>
       <div class="booking-slip-summary">
         <span class="booking-selection-count" id="slipCount">0</span>
@@ -1442,12 +1441,19 @@ document.getElementById("fixtureSearch")?.addEventListener("input",e=>{
   },100);
 });
 
+let bookingBetMode="multiple";
+function getBookingOdds(){
+  if(!selectedMarkets.length)return 1;
+  return bookingBetMode==="single"
+    ? selectedMarkets.reduce((sum,m)=>sum+Number(m.odds||1),0)
+    : selectedMarkets.reduce((product,m)=>product*Number(m.odds||1),1);
+}
 function renderBookingCode(){
   const items=$("slipItems");
   if(!items)return;
   $("slipCount").textContent=String(selectedMarkets.length);
   $("selectionStat").textContent=String(selectedMarkets.length);
-  const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
+  const odds=getBookingOdds();
   $("bookingTotalOdds").textContent=selectedMarkets.length?odds.toFixed(2):"1.00";
   $("bookingTotalOddsBottom").textContent=selectedMarkets.length?odds.toFixed(2):"1.00";
   if(!selectedMarkets.length){
@@ -1455,7 +1461,7 @@ function renderBookingCode(){
     items.innerHTML='<div class="booking-empty-icon">▤</div><strong>No selections yet</strong><span>Choose odds from a match and they will appear here.</span>';
   }else{
     items.className="booking-slip-selections";
-    items.innerHTML=selectedMarkets.map((m,i)=>`<div class="selection"><div><strong>⚽ ${escapeHtml(m.market||"Selection")}</strong><div>${escapeHtml(m.match)}</div><div class="muted">Odds ${Number(m.odds).toFixed(2)}</div></div><button type="button" data-remove-selection="${i}" aria-label="Remove selection">Remove ✕</button></div>`).join("");
+    items.innerHTML=selectedMarkets.map((m,i)=>`<div class="selection"><span class="booking-selection-number">${i+1}</span><div><strong>⚽ ${escapeHtml(m.market||"Selection")}</strong><div>${escapeHtml(m.match)}</div><div class="muted">Odds ${Number(m.odds).toFixed(2)}</div></div><button type="button" data-remove-selection="${i}" aria-label="Remove selection">Remove ✕</button></div>`).join("");
   }
   const stake=Number($("stakeInput")?.value||0);
   $("potentialReturn").textContent=money(stake*odds);
@@ -1482,7 +1488,7 @@ document.getElementById("matches")?.addEventListener("click",e=>{
   const fixtureId=button.dataset.fixtureMarket||card.dataset.fixtureId||"";
   const existing=selectedMarkets.findIndex(m=>m.match===match && m.market===market);
   if(existing>=0){ selectedMarkets.splice(existing,1); button.classList.remove("selected"); }
-  else { selectedMarkets.push({match,market,odds,fixtureId}); button.classList.add("selected"); }
+  else { selectedMarkets.push({match,market,odds,fixtureId,marketId:button.dataset.marketId||"",isExternal:button.hasAttribute("data-external-fixture")}); button.classList.add("selected"); }
   // Keep the user on the match list so they can add selections from two or more games.
   // The floating slip opens Booking Code only when the user is ready.
   renderBookingCode();
@@ -1531,37 +1537,68 @@ document.getElementById("clearBookingSelections")?.addEventListener("click",()=>
   document.querySelectorAll("#matches .market.selected").forEach(b=>b.classList.remove("selected"));
 });
 document.getElementById("bookingSingleTab")?.addEventListener("click",()=>{
+  bookingBetMode="single";
   document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingSingleTab"));
+  renderBookingCode();
 });
 document.getElementById("bookingMultipleTab")?.addEventListener("click",()=>{
+  bookingBetMode="multiple";
   document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingMultipleTab"));
+  renderBookingCode();
 });
-document.getElementById("bookingSystemTab")?.addEventListener("click",()=>{
-  document.querySelectorAll(".booking-mode-tabs button").forEach(b=>b.classList.toggle("active",b.id==="bookingSystemTab"));
-});
-function openBookingCodePreview(){
+
+async function openBookingCodePreview(){
   if(!selectedMarkets.length){
     setStatus("bookingBetStatus","Choose at least one match odds selection before creating a booking slip.","error");
     return;
   }
-  const modal=$("bookingCodeModal");
-  const odds=selectedMarkets.reduce((n,m)=>n*Number(m.odds||1),1);
+  if(!currentUser||!supabaseClient){
+    setStatus("bookingBetStatus","Sign in before creating a shareable booking code.","error");
+    showAuth();
+    return;
+  }
   const stake=Number($("stakeInput")?.value||0);
-  const code="BLU-"+Array.from({length:6},()=> "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
-  $("generatedBookingCode").textContent=code;
-  $("previewTotalOdds").textContent=odds.toFixed(2);
-  $("previewStake").textContent=money(stake);
-  $("previewPotentialReturn").textContent=money(stake*odds);
-  $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`
-    <div class="booking-code-selection">
-      <div class="booking-code-selection-main">
-        <strong>⚽ ${escapeHtml(m.market||"Selection")}</strong>
-        <span>${escapeHtml(m.match)}</span>
-      </div>
-      <div class="booking-code-selection-odds">${Number(m.odds).toFixed(2)}</div>
-    </div>`).join("");
-  modal?.classList.remove("hidden");
-  document.body.style.overflow="hidden";
+  if(!Number.isFinite(stake)||stake<=0){
+    setStatus("bookingBetStatus","Enter a stake greater than GH₵0.00 before booking.","error");
+    return;
+  }
+  const button=$("bookBetButton");
+  button.disabled=true;
+  setStatus("bookingBetStatus","Saving your booking code…");
+  try{
+    const code="BLU-"+Array.from({length:8},()=> "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
+    const selections=selectedMarkets.map(m=>({
+      match:String(m.match||"Selected match"),
+      market:String(m.market||"Selection"),
+      odds:Number(m.odds),
+      fixtureId:String(m.fixtureId||""),
+      marketId:String(m.marketId||""),
+      isExternal:!!m.isExternal
+    }));
+    const odds=getBookingOdds();
+    const snapshot={selections,mode:bookingBetMode,stake,totalOdds:odds};
+    const {data,error}=await supabaseClient.rpc("blustake_create_booking_code",{
+      p_code:code,p_snapshot:snapshot
+    });
+    if(error)throw error;
+    $("generatedBookingCode").textContent=code;
+    $("previewTotalOdds").textContent=odds.toFixed(2);
+    $("previewStake").textContent=money(stake);
+    $("previewPotentialReturn").textContent=money(stake*odds);
+    $("bookingCodeSelections").innerHTML=selectedMarkets.map(m=>`
+      <div class="booking-code-selection">
+        <div class="booking-code-selection-main">
+          <strong>⚽ ${escapeHtml(m.market||"Selection")}</strong>
+          <span>${escapeHtml(m.match)}</span>
+        </div>
+        <div class="booking-code-selection-odds">${Number(m.odds).toFixed(2)}</div>
+      </div>`).join("");
+    $("bookingCodeModal")?.classList.remove("hidden");
+    document.body.style.overflow="hidden";
+    setStatus("bookingBetStatus","Booking code created and saved successfully.","ok");
+  }catch(err){
+    setStatus("bookingBetStatus","Booking code could not be saved: "+(err.message||"Please try again."),"error");
+  }finally{button.disabled=false;}
 }
 function closeBookingCodePreview(){
   $("bookingCodeModal")?.classList.add("hidden");
@@ -1570,6 +1607,10 @@ function closeBookingCodePreview(){
 document.getElementById("bookBetButton")?.addEventListener("click",openBookingCodePreview);
 document.querySelectorAll("[data-close-booking-code]").forEach(el=>el.addEventListener("click",closeBookingCodePreview));
 document.getElementById("closeBookingCodePreview")?.addEventListener("click",closeBookingCodePreview);
+document.getElementById("copyGeneratedBookingCode")?.addEventListener("click",()=>{
+  const code=$("generatedBookingCode")?.textContent||"";
+  if(code&&navigator.clipboard?.writeText)navigator.clipboard.writeText(code).then(()=>setStatus("bookingBetStatus","Booking code copied.","ok")).catch(()=>setStatus("bookingBetStatus","Select and copy the booking code manually.","error"));
+});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeBookingCodePreview();});
 renderBookingCode();
 
@@ -2379,7 +2420,8 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
         <p class="booking-code-eyebrow">BLUSTAKE BOOKING CODE</p>
         <h2 id="bookingCodeModalTitle">Your selections</h2>
         <div class="booking-code-value" id="generatedBookingCode">BLU----</div>
-        <p class="booking-code-disclaimer">Preview code only — it is not redeemable at a bookmaker until a booking-code service is integrated.</p>
+        <button type="button" id="copyGeneratedBookingCode" class="booking-code-primary" style="margin:0 0 14px">Copy booking code</button>
+        <p class="booking-code-disclaimer">This BLUSTAKE code saves the exact selections and odds shown below.</p>
         <div class="booking-code-summary">
           <div><span>Total odds</span><strong id="previewTotalOdds">1.00</strong></div>
           <div><span>Stake</span><strong id="previewStake">GH₵0.00</strong></div>
@@ -2804,20 +2846,28 @@ body{background:var(--bg)}
   <div class="blustake-drawer-grip"></div>
   <button type="button" class="blustake-drawer-close" data-drawer-close>Close</button>
   <div class="blustake-drawer-card">
-   <h2 id="blustakeDrawerTitle">Betslip</h2>
-   <div class="blustake-drawer-body">
-    <p>To place a bet, click on the odds. Or insert a booking code</p>
+   <div class="blustake-drawer-code-entry">
     <label class="sr-only" for="blustakeBookingCodeInput">Booking Code</label>
     <input id="blustakeBookingCodeInput" type="text" autocomplete="off" placeholder="Booking Code">
     <button type="button" id="blustakeLoadBookingCode" disabled>Load</button>
     <p id="blustakeBookingCodeStatus" role="status" aria-live="polite"></p>
    </div>
+   <div id="blustakeDrawerSlipHost"></div>
   </div>
  </section>
 </div>
 <style>
 #blustakeBookingDrawer{display:none;position:fixed;inset:0;z-index:10050}
 #blustakeBookingDrawer.open{display:block}
+#blustakeBookingDrawer .blustake-drawer-panel{max-height:92dvh;display:flex;flex-direction:column;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+#blustakeBookingDrawer .blustake-drawer-card{border:0;box-shadow:none;overflow:auto;min-height:0}
+.blustake-drawer-code-entry{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:8px;padding:8px 0 12px;border-bottom:1px solid #e1e8ef}
+.blustake-drawer-code-entry input{min-width:0;height:48px;border:1px solid #dfe3e9;border-radius:10px;padding:0 13px;font-size:16px}
+.blustake-drawer-code-entry button{border:0;border-radius:10px;background:#075b91;color:#fff;font-weight:800}
+.blustake-drawer-code-entry button:disabled{background:#e1e6ed;color:#77808d}
+.blustake-drawer-code-entry p{grid-column:1/-1;margin:0;font-size:12px;color:#64748b}
+#blustakeDrawerSlipHost .booking-slip-page{margin:0 auto;padding-top:8px;box-shadow:none}
+#blustakeDrawerSlipHost .booking-slip-header{display:none}
 .blustake-drawer-backdrop{position:absolute;inset:0;background:#07111dcc;backdrop-filter:blur(5px)}
 .blustake-drawer-panel{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 35px #0002;max-height:78vh;overflow:auto}
 .blustake-drawer-grip{width:54px;height:5px;border-radius:8px;background:#d0d2d7;margin:2px auto 10px}
@@ -2836,22 +2886,78 @@ body{background:var(--bg)}
 <script>
 (()=>{
  const drawer=document.getElementById('blustakeBookingDrawer');
+ const panel=drawer?.querySelector('.blustake-drawer-panel');
+ const host=document.getElementById('blustakeDrawerSlipHost');
  const input=document.getElementById('blustakeBookingCodeInput');
  const load=document.getElementById('blustakeLoadBookingCode');
  const status=document.getElementById('blustakeBookingCodeStatus');
- if(!drawer)return;
- const open=()=>{drawer.classList.add('open');drawer.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>input?.focus(),120);};
- const close=()=>{drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');document.body.style.overflow='';};
+ const slip=document.querySelector('#view-booking-code .booking-slip-page');
+ const originalParent=slip?.parentNode;
+ const originalNext=slip?.nextSibling;
+ if(!drawer||!host||!slip)return;
+ let opened=false;
+ const open=()=>{
+   if(!opened){host.appendChild(slip);opened=true;}
+   drawer.classList.add('open');
+   drawer.setAttribute('aria-hidden','false');
+   document.body.style.overflow='hidden';
+   setTimeout(()=>input?.focus({preventScroll:true}),100);
+   renderBookingCode();
+ };
+ const close=()=>{
+   drawer.classList.remove('open');
+   drawer.setAttribute('aria-hidden','true');
+   document.body.style.overflow='';
+   if(opened&&originalParent){
+     if(originalNext&&originalNext.parentNode===originalParent)originalParent.insertBefore(slip,originalNext);
+     else originalParent.appendChild(slip);
+     opened=false;
+   }
+ };
  document.addEventListener('click',e=>{
-  const nav=e.target.closest('#bottomBookingCode,#blustakeFloatingSlip');
-  if(nav){e.preventDefault();e.stopImmediatePropagation();open();return;}
-  if(e.target.closest('[data-drawer-close]'))close();
+   const nav=e.target.closest('#bottomBookingCode,#blustakeFloatingSlip');
+   if(nav){e.preventDefault();e.stopImmediatePropagation();open();return;}
+   if(e.target.closest('[data-drawer-close]'))close();
  },true);
- input?.addEventListener('input',()=>{load.disabled=!input.value.trim();status.textContent='';});
- load?.addEventListener('click',()=>{
-  const code=input.value.trim();
-  if(!code)return;
-  status.textContent='This booking-code entry is ready, but code redemption is not connected to a booking-code provider in the current BLUSTAKE backend.';
+ input?.addEventListener('input',()=>{
+   load.disabled=!input.value.trim();
+   if(status)status.textContent='';
+ });
+ load?.addEventListener('click',async()=>{
+   const code=input.value.trim().toUpperCase();
+   if(!code)return;
+   if(!supabaseClient){status.textContent='BLUSTAKE connection is not ready. Please try again.';return;}
+   load.disabled=true;status.textContent='Loading saved selections…';
+   try{
+     const {data,error}=await supabaseClient.rpc('blustake_load_booking_code',{p_code:code});
+     if(error)throw error;
+     const row=Array.isArray(data)?data[0]:data;
+     const snapshot=row?.snapshot||row?.data||row;
+     if(!snapshot||!Array.isArray(snapshot.selections)||!snapshot.selections.length)throw new Error('This booking code was not found or has expired.');
+     selectedMarkets.splice(0,selectedMarkets.length,...snapshot.selections.map(s=>({
+       match:String(s.match||'Selected match'),
+       market:String(s.market||'Selection'),
+       odds:Number(s.odds),
+       fixtureId:String(s.fixtureId||''),
+       marketId:String(s.marketId||''),
+       isExternal:!!s.isExternal,
+       lockedOdds:true
+     })));
+     if(snapshot.mode==='single'){
+       document.getElementById('bookingSingleTab')?.click();
+     }else{
+       document.getElementById('bookingMultipleTab')?.click();
+     }
+     const stakeInput=document.getElementById('stakeInput');
+     if(stakeInput)stakeInput.value=Number(snapshot.stake||0)>0?Number(snapshot.stake).toFixed(2):'';
+     document.querySelectorAll('#matches .market.selected').forEach(b=>b.classList.remove('selected'));
+     renderBookingCode();
+     const fab=document.getElementById('blustakeFloatingSlip');
+     if(fab){fab.hidden=false;const badge=fab.querySelector('[data-slip-count]');if(badge)badge.textContent=String(selectedMarkets.length);}
+     status.textContent='Booking code loaded. Original selections and odds have been restored.';
+   }catch(err){
+     status.textContent=err.message||'Unable to load this booking code.';
+   }finally{load.disabled=!input.value.trim();}
  });
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawer.classList.contains('open'))close();});
 })();
@@ -3048,4 +3154,10 @@ body {
 button, a, input, select, textarea {
   -webkit-tap-highlight-color: transparent;
 }
+
+.booking-selection-number{flex:0 0 25px;width:25px;height:25px;border-radius:50%;display:grid;place-items:center;background:#075b91;color:#fff;font-size:12px;font-weight:900}
+.booking-slip-selections .selection{display:flex;align-items:center;gap:10px}
+.booking-slip-selections .selection>div{flex:1;min-width:0}
+.booking-slip-selections .selection button{white-space:nowrap}
+.booking-mode-tabs button{min-height:42px}
 </style>
