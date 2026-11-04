@@ -722,11 +722,6 @@ body > .header{position:sticky!important;top:0!important;z-index:120!important}
   <div class="quick-categories" aria-label="Sports categories">
     <button class="quick-category active" type="button" data-category="Soccer"><span class="cat-icon">⚽</span><span>Soccer</span></button>
     <button class="quick-category" type="button" data-category="Today"><span class="cat-icon">▦</span><span>Today</span></button>
-    <button class="quick-category" type="button" data-category="Aviator"><span class="cat-icon">✈</span><span>Aviator</span></button>
-    <button class="quick-category" type="button" data-category="Basketball"><span class="cat-icon">🏀</span><span>Basketball</span></button>
-    <button class="quick-category" type="button" data-category="Verify Bet"><span class="cat-icon">♢</span><span>Verify Bet</span></button>
-    <button class="quick-category" type="button" data-category="Codes"><span class="cat-icon">▣</span><span>Codes</span></button>
-    <button class="quick-category" type="button" data-category="All"><span class="cat-icon">▦</span><span>All</span></button>
   </div>
   <div class="sport-tabs" aria-label="Sport tabs">
     <button class="active" type="button">SOCCER</button><button type="button">V-SOCCER</button><button type="button">ESPORTS SOCCER</button><button type="button">BASKETBALL</button><button type="button">TENNIS</button><button type="button">CRICKET</button>
@@ -1433,7 +1428,19 @@ toggleLive?.addEventListener("click",()=>{
   const hidden=document.getElementById("matches").classList.toggle("hidden");
   toggleLive.textContent=hidden?"Show ▼":"Hide ▲";
 });
-document.getElementById("fixtureSearch")?.addEventListener("input",e=>{fixtureSearchQuery=e.target.value.trim().toLowerCase();applyFixtureFilters();});
+let fixtureSearchTimer=null;
+let fixtureFilterFrame=0;
+document.getElementById("fixtureSearch")?.addEventListener("input",e=>{
+  fixtureSearchQuery=e.target.value.trim().toLowerCase();
+  clearTimeout(fixtureSearchTimer);
+  fixtureSearchTimer=setTimeout(()=>{
+    if(fixtureFilterFrame)cancelAnimationFrame(fixtureFilterFrame);
+    fixtureFilterFrame=requestAnimationFrame(()=>{
+      fixtureFilterFrame=0;
+      applyFixtureFilters();
+    });
+  },100);
+});
 
 function renderBookingCode(){
   const items=$("slipItems");
@@ -1946,7 +1953,43 @@ function renderApiFixtureCard(f){
  return `<article class="match api-fixture-card compact-fixture" data-api-fixture="1" data-api-fixture-id="${escapeHtml(fixture.id)}" data-api-status="${status}" data-api-date="${escapeHtml(localDateKey(fixture.date))}" data-search-text="${escapeHtml(`${league.name||"Football"} ${league.country||""} ${home.name||"Home"} ${away.name||"Away"}`.toLowerCase())}"><div class="league"><span>${escapeHtml(league.name||"Football")}${league.country?` · ${escapeHtml(league.country)}`:""}</span><span class="match-status ${live?"live":""}">${live?"● ":""}${statusText}</span></div><div class="match-body compact-match-body"><div class="compact-match-meta"><span>${live?"LIVE SCORE":finished?"FINISHED":"KICK-OFF"}</span><span>${apiFixtureTime(f)}</span></div><div class="compact-match-main"><div class="compact-team-list"><div class="compact-team">${logo(home)}<span>${escapeHtml(home.name||"Home team")}</span><strong>${live||finished?(goals.home??"—"):""}</strong></div><div class="compact-team">${logo(away)}<span>${escapeHtml(away.name||"Away team")}</span><strong>${live||finished?(goals.away??"—"):""}</strong></div></div>${oddsHtml}</div></div></article>`;
 }
 
-function applyFixtureFilters(){const q=fixtureSearchQuery;const today=dateKeyOffset(0),tomorrow=dateKeyOffset(1);document.querySelectorAll("#matches .match").forEach(card=>{const isApi=card.hasAttribute("data-api-fixture");let show=true;if(isApi){const status=card.dataset.apiStatus,date=card.dataset.apiDate;if(activeFixtureFilter==="LIVE")show=status==="LIVE";else if(activeFixtureFilter==="TODAY")show=date===today&&status!=="FINISHED";else if(activeFixtureFilter==="TOMORROW")show=date===tomorrow&&status!=="FINISHED";else if(activeFixtureFilter==="FINISHED")show=status==="FINISHED";else show=status!=="FINISHED";}else{const text=card.textContent.toLowerCase();if(activeFixtureFilter==="LIVE")show=/\bLIVE\b|\bHT\b|first_half|second_half/i.test(text);else if(activeFixtureFilter==="FINISHED")show=/\bFT\b|FINISHED|full_time/i.test(text);else if(activeFixtureFilter==="TODAY")show=localDateKey(card.querySelector(".match-top span:last-child")?.textContent||"")===today||card.textContent.toLowerCase().includes("live match");else if(activeFixtureFilter==="TOMORROW")show=false;}if(q&&!card.textContent.toLowerCase().includes(q))show=false;card.classList.toggle("hidden",!show);});const count=[...document.querySelectorAll("#matches .match")].filter(x=>!x.classList.contains("hidden")).length;const countEl=document.querySelector(".events-count");if(countEl)countEl.textContent=`${count} fixtures`;}
+const fixtureSearchTextCache=new WeakMap();
+function applyFixtureFilters(){
+  const q=fixtureSearchQuery;
+  const today=dateKeyOffset(0),tomorrow=dateKeyOffset(1);
+  const cards=document.querySelectorAll("#matches .match");
+  let count=0;
+  cards.forEach(card=>{
+    const isApi=card.hasAttribute("data-api-fixture");
+    let show=true;
+    if(isApi){
+      const status=card.dataset.apiStatus,date=card.dataset.apiDate;
+      if(activeFixtureFilter==="LIVE")show=status==="LIVE";
+      else if(activeFixtureFilter==="TODAY")show=date===today&&status!=="FINISHED";
+      else if(activeFixtureFilter==="TOMORROW")show=date===tomorrow&&status!=="FINISHED";
+      else if(activeFixtureFilter==="FINISHED")show=status==="FINISHED";
+      else show=status!=="FINISHED";
+    }else{
+      const text=card.textContent.toLowerCase();
+      if(activeFixtureFilter==="LIVE")show=/\bLIVE\b|\bHT\b|first_half|second_half/i.test(text);
+      else if(activeFixtureFilter==="FINISHED")show=/\bFT\b|FINISHED|full_time/i.test(text);
+      else if(activeFixtureFilter==="TODAY")show=localDateKey(card.querySelector(".match-top span:last-child")?.textContent||"")===today||text.includes("live match");
+      else if(activeFixtureFilter==="TOMORROW")show=false;
+    }
+    if(q){
+      let searchable=fixtureSearchTextCache.get(card);
+      if(searchable===undefined){
+        searchable=card.textContent.toLowerCase();
+        fixtureSearchTextCache.set(card,searchable);
+      }
+      if(!searchable.includes(q))show=false;
+    }
+    card.classList.toggle("hidden",!show);
+    if(show)count++;
+  });
+  const countEl=document.querySelector(".events-count");
+  if(countEl)countEl.textContent=`${count} fixtures`;
+}
 
 function parseGoalEvents(raw){return String(raw||"").split(",").map(v=>v.trim()).filter(Boolean).map(v=>{const m=v.match(/^(\d{1,2})\s*:\s*([HA])$/i);if(!m)throw new Error("Goal times must look like 18:H,37:A,52:H.");const minute=Number(m[1]);if(minute<1||minute>90)throw new Error("Goal times must be between minutes 1 and 90.");return {minute,team:m[2].toUpperCase()};}).sort((a,b)=>a.minute-b.minute);}
 function fixtureClock(match){const start=new Date(match.kickoff_at).getTime(),rawElapsed=Math.floor((Date.now()-start)/60000);if(!Number.isFinite(start)||rawElapsed<0)return {status:"scheduled",minute:0,label:"UPCOMING"};const elapsed=rawElapsed;if(elapsed<45)return {status:"first_half",minute:elapsed,label:"LIVE"};if(elapsed<60)return {status:"half_time",minute:45,label:"HT"};if(elapsed<105)return {status:"second_half",minute:elapsed-15,label:"LIVE"};return {status:"full_time",minute:90,label:"FT"};}
@@ -2682,6 +2725,138 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 #matches .compact-manual-odds:has(.compact-odds-unavailable){display:none!important}
 </style>
 
+
+<style id="blustake-reference-layout">
+/* Reference-inspired layout; BLUSTAKE's original navy/blue palette is retained. */
+:root{--bg:#f0f3f8;--card:#fff;--ink:#14243a;--muted:#687487;--line:#dfe5ed}
+body{background:var(--bg)}
+.header{background:var(--navy);box-shadow:0 3px 14px #071d3322}
+.header-inner{min-height:76px}
+.brand{letter-spacing:-.5px}
+#sportsToolbar{background:transparent}
+.quick-categories{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 20px}
+.quick-category{min-height:86px;border-radius:12px;background:linear-gradient(135deg,#0a3150,#075b91);color:#fff;display:flex;align-items:flex-end;justify-content:space-between;padding:13px;font-weight:850;box-shadow:0 3px 10px #0b29451c}
+.quick-category .cat-icon{font-size:23px}
+.sport-tabs{display:none}
+.market-tabs{display:flex;overflow-x:auto;flex-wrap:nowrap;gap:8px;padding:4px 0 12px}
+.market-tabs button{white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:30px;padding:10px 17px;color:#4d596b;font-weight:750}
+.market-tabs button.active{background:var(--blue);border-color:var(--blue);color:white}
+.winners-strip{display:none}
+.search-fixtures{width:100%;max-width:none;border:1px solid var(--line);border-radius:12px;padding:13px;background:white;margin:8px 0}
+.date-filters{display:flex;overflow-x:auto;flex-wrap:nowrap;gap:8px;margin:8px 0 14px}
+.date-filters button{white-space:nowrap;border:1px solid var(--line);border-radius:24px;background:#fff;padding:9px 15px;color:#536174;font-weight:750}
+.date-filters button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.events-head{font-size:14px;font-weight:850;color:var(--ink);padding:8px 0}
+.layout{display:block;max-width:1040px;margin:auto}
+#view-sports>.layout>.section{background:transparent;border:0;box-shadow:none;padding:0}
+#view-sports .section-head{margin:16px 0 10px}
+#view-sports .filters{display:none}
+#matches{display:grid;grid-template-columns:1fr;gap:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+#matches .match{border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0;box-shadow:none}
+#matches .match:last-child{border-bottom:0}
+#matches .league{background:#f5f7fa;border-bottom:1px solid var(--line);padding:13px 16px;color:#18283d;font-size:14px}
+#matches .match-body{padding:13px 16px}
+#matches .compact-match-meta{font-size:12px;color:#657286;margin-bottom:9px}
+#matches .compact-match-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}
+#matches .compact-team-list{display:flex;flex-direction:column;gap:8px}
+#matches .compact-team{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:650}
+#matches .compact-team img{width:25px!important;height:25px!important;flex:0 0 25px!important;object-fit:contain}
+#matches .compact-api-odds-grid{display:grid;grid-template-columns:repeat(3,minmax(58px,82px));gap:7px}
+#matches .compact-api-odd{min-height:56px;background:var(--blue);border:0;border-radius:9px;color:#fff;padding:8px 5px}
+#matches .compact-api-odd small{display:none}
+#matches .compact-api-odd strong{font-size:17px}
+#matches .compact-feed-label{display:none}
+#matches .compact-odds-unavailable{font-size:12px;color:#7b8492}
+#matches .market-grid{gap:7px}
+#matches .market{background:var(--blue);border-color:var(--blue);color:white}
+#matches .market small{color:#e5f2ff}
+#matches .market.selected{background:var(--navy);border-color:var(--navy)}
+.hero{border-radius:16px;min-height:220px;margin:16px 0 18px;box-shadow:0 8px 22px #0b29451c}
+.hero-panel{background:#ffffff14}
+.bottom-nav{background:#f7f8fbf2;backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+.bottom-nav button.active{color:var(--blue)}
+/* Auth pages retain the working Supabase form, with the reference's clean card treatment. */
+#authModal .modal{max-width:560px;border-radius:18px;padding:26px;background:#fff;box-shadow:0 12px 40px #071d3326}
+#authModal h2{font-size:28px;color:#111d30}
+#authModal .field{min-height:52px;border-radius:11px}
+#authModal .tabs button.active{background:var(--blue);color:#fff}
+#authModal #authSubmit{width:100%;min-height:54px;background:var(--green)}
+#authModal .modal:before{content:"BLUSTAKE";display:block;background:linear-gradient(120deg,var(--navy),var(--blue));color:#fff;font-weight:950;font-size:25px;letter-spacing:.3px;padding:28px 22px;border-radius:12px;margin:-10px -10px 22px}
+@media(min-width:760px){
+ #matches{grid-template-columns:1fr}
+ .quick-categories{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:600px){
+ .wrap{padding-left:12px;padding-right:12px}
+ .quick-categories{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .quick-category{min-height:74px}
+ #matches .compact-match-main{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+ #matches .compact-api-odds-grid{grid-template-columns:repeat(3,minmax(48px,1fr));gap:5px}
+ #matches .compact-api-odd{min-width:0;min-height:48px;padding:6px 2px}
+ #matches .compact-api-odd strong{font-size:15px}
+ #matches .compact-team{font-size:14px}
+ #authModal .modal{width:calc(100% - 24px);padding:18px}
+}
+</style>
+<div id="blustakeBookingDrawer" aria-hidden="true">
+ <div class="blustake-drawer-backdrop" data-drawer-close></div>
+ <section class="blustake-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="blustakeDrawerTitle">
+  <div class="blustake-drawer-grip"></div>
+  <button type="button" class="blustake-drawer-close" data-drawer-close>Close</button>
+  <div class="blustake-drawer-card">
+   <h2 id="blustakeDrawerTitle">Betslip</h2>
+   <div class="blustake-drawer-body">
+    <p>To place a bet, click on the odds. Or insert a booking code</p>
+    <label class="sr-only" for="blustakeBookingCodeInput">Booking Code</label>
+    <input id="blustakeBookingCodeInput" type="text" autocomplete="off" placeholder="Booking Code">
+    <button type="button" id="blustakeLoadBookingCode" disabled>Load</button>
+    <p id="blustakeBookingCodeStatus" role="status" aria-live="polite"></p>
+   </div>
+  </div>
+ </section>
+</div>
+<style>
+#blustakeBookingDrawer{display:none;position:fixed;inset:0;z-index:10050}
+#blustakeBookingDrawer.open{display:block}
+.blustake-drawer-backdrop{position:absolute;inset:0;background:#07111dcc;backdrop-filter:blur(5px)}
+.blustake-drawer-panel{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -8px 35px #0002;max-height:78vh;overflow:auto}
+.blustake-drawer-grip{width:54px;height:5px;border-radius:8px;background:#d0d2d7;margin:2px auto 10px}
+.blustake-drawer-close{display:block;margin:0 0 12px auto;background:none;color:#626b79;font-weight:700;padding:5px 0}
+.blustake-drawer-card{border:1px solid #e0e4eb;border-radius:12px;overflow:hidden;box-shadow:0 2px 6px #0b294514}
+.blustake-drawer-card h2{margin:0;background:var(--navy);color:white;padding:15px 18px;font-size:19px}
+.blustake-drawer-body{padding:20px}
+.blustake-drawer-body p{margin:0 0 16px;color:#707887;line-height:1.5}
+#blustakeBookingCodeInput{width:100%;height:58px;border:1px solid #dfe3e9;border-radius:11px;padding:0 16px;font-size:17px;outline:none}
+#blustakeBookingCodeInput:focus{border-color:var(--blue);box-shadow:0 0 0 3px #075b9118}
+#blustakeLoadBookingCode{width:100%;height:54px;margin-top:16px;border-radius:11px;background:var(--blue);color:#fff;font-weight:800}
+#blustakeLoadBookingCode:disabled{background:#e1e6ed;color:#77808d}
+#blustakeBookingCodeStatus{font-size:13px;margin:10px 0 0!important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>
+<script>
+(()=>{
+ const drawer=document.getElementById('blustakeBookingDrawer');
+ const input=document.getElementById('blustakeBookingCodeInput');
+ const load=document.getElementById('blustakeLoadBookingCode');
+ const status=document.getElementById('blustakeBookingCodeStatus');
+ if(!drawer)return;
+ const open=()=>{drawer.classList.add('open');drawer.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';setTimeout(()=>input?.focus(),120);};
+ const close=()=>{drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');document.body.style.overflow='';};
+ document.addEventListener('click',e=>{
+  const nav=e.target.closest('#bottomBookingCode,#blustakeFloatingSlip');
+  if(nav){e.preventDefault();e.stopImmediatePropagation();open();return;}
+  if(e.target.closest('[data-drawer-close]'))close();
+ },true);
+ input?.addEventListener('input',()=>{load.disabled=!input.value.trim();status.textContent='';});
+ load?.addEventListener('click',()=>{
+  const code=input.value.trim();
+  if(!code)return;
+  status.textContent='This booking-code entry is ready, but code redemption is not connected to a booking-code provider in the current BLUSTAKE backend.';
+ });
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&drawer.classList.contains('open'))close();});
+})();
+</script>
+
 </body>
 </html>
 
@@ -2854,4 +3029,23 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 #matchDetailsContent .match-details-header-spacer{width:36px!important;flex:0 0 36px!important}
 #matchDetailsContent .match-details-team img.blustake-team-name-badge{width:58px!important;height:58px!important;min-width:58px!important;object-fit:contain!important;border:1px solid #d9e4f1!important;border-radius:14px!important;background:#fff!important;padding:5px!important}
 @media(max-width:420px){#matchDetailsContent .match-details-team img.blustake-team-name-badge{width:48px!important;height:48px!important;min-width:48px!important}}
+
+/* User-requested: remove the horizontal market-type strip below the category tiles. */
+.market-tabs{display:none!important}
+
+/* Mobile scrolling and match-list rendering performance */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+}
+#matches .match {
+  contain: layout paint;
+}
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
 </style>
