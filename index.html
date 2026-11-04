@@ -653,6 +653,30 @@ html.fixtures-loading footer { display:none !important; }
 body{padding-bottom:76px!important}
 @media(max-width:460px){.hero-carousel{margin:7px 0 9px!important}.hero-slide{aspect-ratio:2/1!important}.hero-slide-label{bottom:10%!important}.bottom-nav{padding-bottom:calc(5px + env(safe-area-inset-bottom))!important}}
 </style>
+
+<style id="blustake-mybets-sticky-header-and-39px-ticket-bar">
+/* Keep the main BLUSTAKE navigation visible, then pin the complete My Bets heading,
+   Open Bets/Bet History tabs and history filters beneath it while the list scrolls. */
+body > .header{position:sticky!important;top:0!important;z-index:120!important}
+#view-bets .mybets-sticky-history-head{position:sticky!important;top:var(--blustake-main-header-height,68px)!important;z-index:110!important;background:#163a5f!important;isolation:isolate!important}
+#view-bets .mybets-header{position:relative!important;top:auto!important}
+#view-bets .mybets-tabs{position:relative!important;top:auto!important}
+#view-bets .mybets-filters{position:relative!important;top:auto!important}
+#view-bets .mybets-sticky-history-head .mybets-filters{background:#fff!important;box-shadow:0 1px 0 #dce6ee!important}
+#view-bets .mybet-history-row .mybet-card-head{height:39px!important;min-height:39px!important;padding:0 11px!important}
+#view-bets .mybet-history-row .mybet-card-head strong,
+#view-bets .mybet-history-row .mybet-card-head .mybet-state{font-size:13px!important}
+#view-bets .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-won,
+#view-bets .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-lost{font-size:16px!important}
+@media(max-width:460px){
+  #view-bets .mybet-history-row .mybet-card-head{height:39px!important;min-height:39px!important;padding:0 10px!important}
+  #view-bets .mybet-history-row .mybet-card-head strong,
+  #view-bets .mybet-history-row .mybet-card-head .mybet-state{font-size:13px!important}
+  #view-bets .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-won,
+  #view-bets .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-lost{font-size:16px!important}
+}
+</style>
+
 </head>
 <body class="show-home-hero">
 <header class="header">
@@ -931,6 +955,7 @@ body{padding-bottom:76px!important}
 
   <section id="view-bets" class="view hidden">
     <div class="mybets-page">
+      <div class="mybets-sticky-history-head">
       <header class="mybets-header">
         <div class="mybets-brand">BLUSTAKE</div>
         <div class="mybets-balance"><span class="mybets-wallet-icon">▣</span><span><small>BALANCE</small><strong id="myBetsBalance">GH₵ —</strong></span></div>
@@ -949,6 +974,7 @@ body{padding-bottom:76px!important}
         <button type="button" data-history-filter="all">🏆 Result: All</button>
         <button type="button" data-history-filter="won">Won</button>
         <button type="button" data-history-filter="lost">Lost</button>
+      </div>
       </div>
       <div class="mybets-empty" id="openBetsEmpty">
         <div class="mybets-empty-icon">🎟</div>
@@ -1181,14 +1207,16 @@ document.querySelectorAll("[data-history-filter]").forEach(b=>b.addEventListener
 async function loadMyBets(){
   const list=$("myBetsList");
   if(!list)return;
-  if(!currentUser||!supabaseClient){
-    list.classList.add("hidden");
-    $("openBetsEmpty").classList.remove("hidden");
-    $("betHistoryEmpty").classList.remove("hidden");
-    return;
-  }
   const isHistory=$("betHistoryTab").classList.contains("active");
   const empty=isHistory?$("betHistoryEmpty"):$("openBetsEmpty");
+  const otherEmpty=isHistory?$("openBetsEmpty"):$("betHistoryEmpty");
+  // Only the empty message for the selected tab may ever be visible.
+  otherEmpty.classList.add("hidden");
+  if(!currentUser||!supabaseClient){
+    list.classList.add("hidden");
+    empty.classList.remove("hidden");
+    return;
+  }
   list.classList.remove("hidden");
   list.innerHTML=''; // Keep the loading state silent: no visible loading box while bets refresh.
   empty.classList.add("hidden");
@@ -1219,7 +1247,7 @@ async function loadMyBets(){
       if(historyFilter==="lost") return st.includes("lost");
       return true;
     });
-    if(!rows.length){list.classList.add("hidden");empty.classList.remove("hidden");return;}
+    if(!rows.length){list.classList.add("hidden");empty.classList.remove("hidden");otherEmpty.classList.add("hidden");return;}
     // Load the saved legs, then resolve each leg to its market and match.
     let legs=[],markets=[],matches=[];
     const betIds=rows.map(b=>b.id).filter(Boolean);
@@ -2766,4 +2794,24 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
  .mybet-history-row .mybet-meta small{font-size:15px!important}
  .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-won,.mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-lost{font-size:20px!important}
 }
+</style>
+
+<style id="blustake-settled-bets-final-compact-fix">
+/* Keep the selected tab's empty state from creating a blank gap above real history rows. */
+#view-bets #openBetsEmpty.hidden,#view-bets #betHistoryEmpty.hidden,#view-bets #myBetsList.hidden{display:none!important}
+#view-bets .mybets-empty{min-height:0!important;height:auto!important;padding:0!important;margin:0!important}
+#view-bets .mybets-list{padding:10px 12px 24px!important}
+#view-bets .mybet-history-row{grid-template-columns:64px minmax(0,1fr)!important;gap:8px!important;margin:0 0 10px!important;padding:0 0 9px!important}
+#view-bets .mybet-history-date{padding:10px 0 0 2px!important}
+#view-bets .mybet-history-date strong{font-size:23px!important}
+#view-bets .mybet-history-date span{font-size:15px!important;margin-top:4px!important}
+#view-bets .mybet-history-row .mybet-card-head{height:44px!important;min-height:44px!important;padding:0 12px!important}
+#view-bets .mybet-history-row .mybet-card-head strong,#view-bets .mybet-history-row .mybet-card-head .mybet-state{font-size:14px!important}
+#view-bets .mybet-history-row .mybet-meta{padding:8px 0 9px!important;gap:6px!important}
+#view-bets .mybet-history-row .mybet-meta small{font-size:14px!important}
+#view-bets .mybet-history-row .mybet-meta strong{font-size:15px!important}
+#view-bets .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-won,#view-bets .mybet-history-row .mybet-meta>div:nth-child(2) strong.amount-lost{font-size:18px!important}
+#view-bets .mybet-history-row .mybet-leg{padding:8px 0!important}
+#view-bets .mybet-history-row .mybet-leg-match{font-size:14px!important}
+@media(max-width:460px){#view-bets .mybet-history-row{grid-template-columns:64px minmax(0,1fr)!important;gap:7px!important}#view-bets .mybet-history-row .mybet-card-head{height:44px!important;min-height:44px!important;padding:0 11px!important}}
 </style>
