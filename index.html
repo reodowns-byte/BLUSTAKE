@@ -2651,6 +2651,13 @@ setInterval(()=>{if(supabaseClient)loadFixtures();},15000);
 }
 </style>
 
+
+<style id="blustake-hide-odds-status-messages">
+/* Hide only the odds placeholder when no prices are available; keep all fixtures and real odds visible. */
+#matches .compact-api-odds:has(.compact-odds-unavailable),
+#matches .compact-manual-odds:has(.compact-odds-unavailable){display:none!important}
+</style>
+
 </body>
 </html>
 
